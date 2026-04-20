@@ -1,0 +1,3046 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Life RPG ⚔️</title>
+
+  <!-- PWA: App nativa Android — elimina barra URL, mantiene barra de estado -->
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Life RPG" />
+  <meta name="theme-color" content="#0F0F1A" />
+  <!-- manifest inline — iconos 192 y 512 requeridos por Chrome para "Instalar app" -->
+  <link rel="manifest" href="data:application/manifest+json,{
+    %22name%22:%22Life%20RPG%22,
+    %22short_name%22:%22LifeRPG%22,
+    %22description%22:%22Tu%20aventura%20familiar%20de%20gestas%20y%20recompensas%22,
+    %22start_url%22:%22/%22,
+    %22scope%22:%22/%22,
+    %22display%22:%22standalone%22,
+    %22orientation%22:%22portrait%22,
+    %22background_color%22:%22%230F0F1A%22,
+    %22theme_color%22:%22%230F0F1A%22,
+    %22icons%22:[
+      {%22src%22:%22https://cdn-icons-png.flaticon.com/192/1068/1068724.png%22,%22sizes%22:%22192x192%22,%22type%22:%22image/png%22,%22purpose%22:%22any%20maskable%22},
+      {%22src%22:%22https://cdn-icons-png.flaticon.com/512/1068/1068724.png%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22,%22purpose%22:%22any%20maskable%22}
+    ]
+  }" />
+
+  <!-- Fuentes de Videojuego -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Paytone+One&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <!-- Integración de Pinia para Estado Global Centralizado -->
+  <script src="https://unpkg.com/vue-demi"></script>
+  <script src="https://unpkg.com/pinia@2/dist/pinia.iife.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            title: ['"Paytone One"', 'sans-serif'],
+            body:  ['"Fredoka"', 'sans-serif'],
+          },
+          colors: {
+            rpgYellow: '#FFD700', rpgOrange: '#FF6B35', rpgPurple: '#7B2FBE',
+            rpgDark: '#1A1A2E', rpgDarker: '#0F0F1A', rpgCard: '#1f2947',
+            rpgGreen: '#00FF7F', rpgBlue: '#00B4FF', rpgRed: '#FF4757',
+          },
+          boxShadow: {
+            brutal:      '4px 4px 0px #000',
+            brutalLg:    '6px 6px 0px #000',
+            brutalXl:    '8px 8px 0px #000',
+            brutalInset: 'inset 4px 4px 0px rgba(0,0,0,0.3)',
+            glow:        '0 0 20px rgba(255,215,0,0.6)',
+            glowPurple:  '0 0 30px rgba(123,47,190,0.8)',
+            glowGreen:   '0 0 20px rgba(0,255,127,0.5)',
+          },
+          keyframes: {
+            'bounce-in':     { '0%':{transform:'scale(0.3)',opacity:'0'},'50%':{transform:'scale(1.1)'},'70%':{transform:'scale(0.9)'},'100%':{transform:'scale(1)',opacity:'1'} },
+            'xp-flash':      { '0%,100%':{filter:'brightness(1)'},'50%':{filter:'brightness(1.5) drop-shadow(0 0 10px #00FF7F)'} },
+            'coin-spin':     { '0%':{transform:'rotateY(0deg) scale(1)'},'50%':{transform:'rotateY(180deg) scale(1.4)'},'100%':{transform:'rotateY(360deg) scale(1)'} },
+            'slide-up':      { '0%':{transform:'translateY(30px)',opacity:'0'},'100%':{transform:'translateY(0)',opacity:'1'} },
+            'shake':         { '0%,100%':{transform:'translateX(0)'},'20%,60%':{transform:'translateX(-10px) rotate(-5deg)'},'40%,80%':{transform:'translateX(10px) rotate(5deg)'} },
+            'float':         { '0%,100%':{transform:'translateY(0px)'},'50%':{transform:'translateY(-15px)'} },
+            'magic-stripes': { '0%':{backgroundPosition:'0 0'},'100%':{backgroundPosition:'30px 0'} },
+          },
+          animation: {
+            'bounce-in':  'bounce-in 0.6s cubic-bezier(0.175,0.885,0.32,1.275) both',
+            'xp-flash':   'xp-flash 1s ease-in-out 2',
+            'coin-spin':  'coin-spin 0.6s cubic-bezier(0.34,1.56,0.64,1)',
+            'slide-up':   'slide-up 0.4s cubic-bezier(0.175,0.885,0.32,1.275) both',
+            'shake':      'shake 0.5s ease-in-out',
+            'float':      'float 4s ease-in-out infinite',
+            'stripes':    'magic-stripes 1s linear infinite',
+          },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #0F0F1A;
+      min-height: 100vh;
+      font-family: 'Fredoka', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
+      color: #ffffff;
+    }
+    button, [role=button], .select-none { touch-action: manipulation; outline: none !important; }
+    h1, h2, h3, .font-title { font-family: 'Paytone One', sans-serif; letter-spacing: 1px; }
+
+    /* ===== FONDO MÁGICO ===== */
+    .magic-bg {
+      background-color: #0F0F1A;
+      background-image:
+        radial-gradient(circle at 15% 50%, rgba(123,47,190,0.15), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(0,180,255,0.1), transparent 25%),
+        url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    /* ===== BARRA XP ===== */
+    .xp-bar-fill { transition: width 1s cubic-bezier(0.25,0.46,0.45,0.94); }
+    .bar-stripes {
+      background-image: linear-gradient(45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%, transparent);
+      background-size: 30px 30px;
+    }
+
+    /* ===== BOTONES 3D NEO-BRUTALISM ===== */
+    .btn-3d { position: relative; overflow: hidden; transition: all 0.1s cubic-bezier(0.4,0,0.2,1); }
+    .btn-3d:active:not(:disabled) { transform: translateY(4px) translateX(4px); box-shadow: 0px 0px 0px #000 !important; }
+    .btn-3d:disabled { filter: grayscale(0.8) opacity(0.6); cursor: not-allowed; }
+    .btn-3d::after { content:''; position:absolute; top:0; left:-100%; width:50%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent); transition:left 0.5s ease-in-out; pointer-events: none; }
+    .btn-3d:hover:not(:disabled)::after { left:200%; }
+
+    /* ===== PIN ===== */
+    .pin-dot { width:20px; height:20px; border-radius:50%; border:4px solid #000; transition:all 0.2s; background-color:#0a0a14; box-shadow:2px 2px 0 #000; }
+    .pin-dot.filled { background:#FFD700; border-color:#000; transform:scale(1.2); }
+    .pin-key { width:72px; height:72px; border-radius:20px; border:4px solid #000; background:linear-gradient(to bottom,#4b5563,#1f2937); color:white; font-size:28px; font-family:'Paytone One',sans-serif; cursor:pointer; box-shadow:4px 4px 0 #000; display:flex; align-items:center; justify-content:center; user-select:none; -webkit-tap-highlight-color:transparent; transition:all 0.1s; }
+    .pin-key:active { transform:translateY(4px) translateX(4px); box-shadow:0px 0px 0px #000; }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width:8px; }
+    ::-webkit-scrollbar-track { background:#0F0F1A; border-left:2px solid #2D1B4E; }
+    ::-webkit-scrollbar-thumb { background:#7B2FBE; border-radius:4px; border:1px solid #1A1A2E; }
+    ::-webkit-scrollbar-thumb:hover { background:#FFD700; }
+
+    /* ===== MISSION ITEMS ===== */
+    .mission-item { animation: slide-up 0.4s cubic-bezier(0.175,0.885,0.32,1.275) both; }
+    .mission-item:nth-child(1){animation-delay:.05s} .mission-item:nth-child(2){animation-delay:.10s}
+    .mission-item:nth-child(3){animation-delay:.15s} .mission-item:nth-child(4){animation-delay:.20s}
+    .mission-item:nth-child(5){animation-delay:.25s}
+
+    /* ===== ADMIN TABS ===== */
+    .admin-tab { transition: all 0.2s; }
+    .admin-tab.active { background:#7B2FBE; border-color:#7B2FBE; box-shadow:4px 4px 0 #000; }
+
+    /* ===== COLOR PICKER ===== */
+    input[type=color] { -webkit-appearance:none; border:4px solid #000; border-radius:12px; width:50px; height:50px; cursor:pointer; background:#0a0a14; padding:0; overflow:hidden; }
+    input[type=color]::-webkit-color-swatch-wrapper { padding:0; }
+    input[type=color]::-webkit-color-swatch { border:none; border-radius:8px; }
+  </style>
+</head>
+
+<body class="magic-bg">
+<div id="app">
+
+  <!-- ==========================================
+       1. PANTALLA DE CARGA
+  =========================================== -->
+  <div v-if="estado.cargando" class="min-h-screen flex flex-col items-center justify-center gap-6">
+    <div class="relative">
+      <div class="text-9xl animate-float relative z-10" style="filter:drop-shadow(0 10px 10px rgba(0,0,0,0.5))">⚔️</div>
+      <div class="absolute inset-0 bg-rpgYellow rounded-full blur-3xl opacity-20 animate-pulse"></div>
+    </div>
+    <h1 class="font-title text-rpgYellow text-3xl tracking-widest animate-pulse" style="text-shadow:3px 3px 0 #000">FORJANDO MUNDO...</h1>
+    <div class="w-64 h-6 bg-rpgDark rounded-full border-4 border-black overflow-hidden shadow-brutal p-0.5">
+      <div class="h-full bg-gradient-to-r from-rpgPurple via-rpgBlue to-rpgGreen rounded-full animate-stripes bar-stripes" style="width:100%"></div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       2. PANTALLA DE LOGIN
+  =========================================== -->
+  <div v-else-if="!estado.perfilActual"
+       class="min-h-screen flex flex-col items-center justify-end pb-12 px-4 relative overflow-hidden"
+       style="background:linear-gradient(180deg,#090514 0%,#1a0a3e 40%,#0a051a 100%)">
+
+    <!-- Decoraciones del fondo -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute top-10 left-10 text-4xl animate-float" style="animation-delay:0.0s">✨</div>
+      <div class="absolute top-24 right-12 text-3xl animate-float" style="animation-delay:0.7s">⭐</div>
+      <div class="absolute top-1/3 left-6 text-3xl animate-float" style="animation-delay:1.2s">🛡️</div>
+      <div class="absolute top-1/4 right-8 text-4xl animate-float" style="animation-delay:2.0s">🔮</div>
+      <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-rpgPurple rounded-full blur-[100px] opacity-20"></div>
+    </div>
+
+    <!-- LOGO -->
+    <div class="relative z-10 text-center mb-12 mt-10">
+      <div class="text-8xl mb-2 animate-float" style="filter:drop-shadow(0 0 30px rgba(255,215,0,0.8));animation-duration:3s">🐉</div>
+      <h1 class="font-title text-6xl tracking-tight leading-none mb-3 transform -rotate-2"
+          style="text-shadow:6px 6px 0 #000,0 0 40px rgba(123,47,190,0.8)">
+        <span class="text-rpgYellow">LIFE</span><br/>
+        <span class="text-white text-7xl">RPG</span>
+      </h1>
+      <div class="inline-block bg-black/50 border-2 border-rpgBlue rounded-full px-4 py-1">
+        <p class="text-rpgBlue text-sm tracking-widest font-bold uppercase">Tu Aventura Real</p>
+      </div>
+    </div>
+
+    <!-- SESIÓN RECORDADA -->
+    <div v-if="loginState.sesionRecordada && !loginState.mostrarNuevoUsuario && !loginState.perfilSeleccionado"
+         class="relative z-10 w-full max-w-sm space-y-4 animate-slide-up">
+      <div class="flex items-center justify-center gap-2 mb-2">
+        <span class="h-[2px] w-8 bg-gray-600 rounded"></span>
+        <p class="text-gray-400 text-xs font-bold uppercase tracking-widest">Héroe de Regreso</p>
+        <span class="h-[2px] w-8 bg-gray-600 rounded"></span>
+      </div>
+      <button @click="seleccionarParaLogin(loginState.sesionRecordada)"
+              class="btn-3d w-full rounded-2xl border-4 border-black p-4 flex items-center gap-4 shadow-brutalLg"
+              :class="loginState.sesionRecordada.rol==='admin' ? 'bg-gradient-to-r from-[#5E3A18] to-[#8B5A2B]' : 'bg-gradient-to-r from-rpgPurple to-rpgBlue'">
+        <div class="w-14 h-14 rounded-xl border-4 border-black bg-white/20 flex items-center justify-center text-4xl flex-shrink-0">
+          {{ loginState.sesionRecordada.rol === 'admin' ? '👑' : '🧑‍🚀' }}
+        </div>
+        <div class="text-left flex-1">
+          <div class="font-title text-xl text-white" style="text-shadow:2px 2px 0 #000">{{ loginState.sesionRecordada.nombre }}</div>
+          <div class="text-sm font-bold text-rpgYellow" style="text-shadow:1px 1px 0 #000">
+            {{ loginState.sesionRecordada.rol === 'admin' ? 'Dungeon Master' : `Nivel ${loginState.sesionRecordada.nivel} · ${loginState.sesionRecordada.monedas} 🪙` }}
+          </div>
+        </div>
+        <div class="text-2xl font-black text-white bg-black/30 rounded-full w-10 h-10 flex items-center justify-center">▶</div>
+      </button>
+      <button @click="loginState.mostrarNuevoUsuario = true; loginState.sesionRecordada = null"
+              class="w-full py-3 rounded-xl border-2 border-dashed border-gray-500 text-gray-400 hover:text-white hover:border-white text-sm font-bold transition-all">
+        🛡️ Cambiar de Aventurero
+      </button>
+    </div>
+
+    <!-- BUSCAR NOMBRE -->
+    <div v-else-if="!loginState.perfilSeleccionado"
+         class="relative z-10 w-full max-w-sm bg-rpgCard border-4 border-black rounded-3xl p-6 shadow-brutalXl animate-slide-up">
+      <h2 class="font-title text-xl text-center text-white mb-6" style="text-shadow:2px 2px 0 #000">¿Quién eres, viajero?</h2>
+      <div class="space-y-4">
+        <div class="relative">
+          <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-2xl">👤</div>
+          <input v-model="loginState.nombreIngresado" type="text" placeholder="Tu nombre..."
+                 class="w-full bg-rpgDarker border-4 border-black focus:border-rpgYellow rounded-2xl pl-12 pr-4 py-4 text-white text-lg font-bold placeholder-gray-600 outline-none transition-colors"
+                 @keyup.enter="buscarPerfilPorNombre" />
+        </div>
+        <div v-if="loginState.errorNombre" class="bg-rpgRed/20 border-2 border-rpgRed text-rpgRed p-3 rounded-xl text-sm font-bold text-center animate-shake">
+          ❌ {{ loginState.errorNombre }}
+        </div>
+        <button @click="buscarPerfilPorNombre"
+                class="btn-3d w-full bg-rpgYellow text-black border-4 border-black rounded-2xl py-4 font-title text-xl shadow-brutalLg uppercase tracking-wider">
+          Entrar al Reino ⚔️
+        </button>
+      </div>
+    </div>
+
+    <!-- TECLADO PIN -->
+    <div v-else class="relative z-10 w-full max-w-sm bg-rpgCard border-4 border-black rounded-3xl p-6 shadow-brutalXl animate-slide-up">
+      <button @click="volverSeleccion" class="absolute top-4 left-4 w-10 h-10 bg-black/30 rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-colors">←</button>
+      <div class="text-center mb-6 mt-2">
+        <div class="text-6xl mb-2 animate-bounce">{{ loginState.perfilSeleccionado.rol === 'admin' ? '👑' : '🧑‍🚀' }}</div>
+        <h2 class="font-title text-2xl text-white" style="text-shadow:2px 2px 0 #000">{{ loginState.perfilSeleccionado.nombre }}</h2>
+        <p class="text-rpgBlue font-bold text-sm mt-1">Ingresa tu código secreto</p>
+      </div>
+      <div class="flex justify-center gap-4 mb-6">
+        <div v-for="i in 4" :key="i" class="pin-dot" :class="{ filled: loginState.pin.length >= i }"></div>
+      </div>
+      <div v-if="loginState.error" class="bg-rpgRed/20 border-2 border-rpgRed text-rpgRed p-2 rounded-xl text-sm font-bold text-center mb-4 animate-shake">
+        ❌ Código incorrecto.
+      </div>
+      <div class="grid grid-cols-3 gap-3 justify-items-center mb-4">
+        <button v-for="n in [1,2,3,4,5,6,7,8,9]" :key="n" class="pin-key" @click="ingresarDigito(String(n))">{{ n }}</button>
+        <div></div>
+        <button class="pin-key" @click="ingresarDigito('0')">0</button>
+        <button class="pin-key" style="background:linear-gradient(to bottom,#FF4757,#c0392b)" @click="borrarDigito()">⌫</button>
+      </div>
+      <div class="flex items-center justify-center gap-2 bg-black/20 p-3 rounded-xl border-2 border-black/30">
+        <input type="checkbox" id="recordar" v-model="loginState.recordar" class="w-5 h-5 accent-rpgYellow rounded cursor-pointer" />
+        <label for="recordar" class="text-white font-bold text-sm cursor-pointer select-none">Recordar mi Héroe</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       3. VISTA PRINCIPAL (JUEGO)
+  =========================================== -->
+  <div v-else class="min-h-screen relative">
+
+    <!-- HEADER HUD -->
+    <div class="sticky top-0 z-40 px-4 pt-4 pb-4 border-b-4 border-black shadow-brutal"
+         style="background:rgba(15,15,26,0.97);backdrop-filter:blur(8px)"
+         :class="{ 'animate-xp-flash': animaciones.xpFlash }">
+      <div class="max-w-md mx-auto">
+        <div class="flex items-center justify-between mb-3">
+          <!-- Avatar mini + info -->
+          <div class="flex items-center gap-3">
+            <div class="relative cursor-pointer group" @click="abrirAvatarEditor()">
+              <div class="w-16 h-16 bg-gradient-to-b from-rpgPurple to-rpgDark rounded-2xl border-4 border-rpgYellow shadow-brutal flex items-center justify-center overflow-hidden relative">
+                <canvas id="avatar-mini" width="60" height="60" class="absolute inset-0 z-10"></canvas>
+                <div class="absolute inset-0 bg-rpgPurple blur-md opacity-50 z-0"></div>
+              </div>
+              <div class="absolute -bottom-2 -right-2 bg-rpgYellow text-black text-xs font-title px-2 py-0.5 rounded-lg border-2 border-black shadow-brutal z-20">
+                Nv.{{ estado.perfilActual.nivel }}
+              </div>
+              <div class="absolute -top-2 -right-2 bg-rpgPurple text-white text-xs rounded-full w-6 h-6 flex items-center justify-center border-2 border-black shadow-brutal z-20">✏️</div>
+            </div>
+            <div>
+              <h1 class="font-title text-xl text-white leading-none" style="text-shadow:2px 2px 0 #000">{{ estado.perfilActual.nombre }}</h1>
+              <p class="text-rpgBlue text-xs font-bold uppercase tracking-wider mt-1">{{ estado.perfilActual.rol === 'admin' ? '👑 Dungeon Master' : '⚔️ Aventurero' }}</p>
+            </div>
+          </div>
+          <!-- Monedas + botones -->
+          <div class="flex flex-col items-end gap-2">
+            <div class="bg-black/40 border-2 border-rpgYellow rounded-xl px-3 py-1 flex items-center gap-2 shadow-brutalInset"
+                 :class="{ 'animate-coin-spin': animaciones.coinSpin }">
+              <span class="text-xl">🪙</span>
+              <span class="font-title text-rpgYellow text-lg" style="text-shadow:1px 1px 0 #000">{{ estado.perfilActual.monedas }}</span>
+            </div>
+            <div class="flex gap-2">
+              <button v-if="estado.perfilActual.rol === 'admin'"
+                      @click="estado.panelAdmin = true"
+                      class="btn-3d w-8 h-8 bg-rpgPurple border-2 border-black rounded-lg flex items-center justify-center text-white shadow-brutal">
+                ⚙️
+              </button>
+              <button @click="cerrarSesion"
+                      class="btn-3d w-8 h-8 bg-rpgRed border-2 border-black rounded-lg flex items-center justify-center text-white shadow-brutal">
+                🚪
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- BARRA XP -->
+        <div>
+          <div class="flex justify-between items-end mb-1 px-1">
+            <span class="text-[10px] font-black text-rpgGreen uppercase tracking-widest" style="text-shadow:1px 1px 0 #000">⭐ Experiencia</span>
+            <span class="text-xs text-white font-title">{{ estado.perfilActual.xp }} / {{ xpParaSiguienteNivel }}</span>
+          </div>
+          <div class="h-5 bg-black rounded-full border-4 border-gray-800 overflow-hidden shadow-brutalInset">
+            <div class="xp-bar-fill h-full rounded-full bg-rpgGreen animate-stripes bar-stripes border-r-2 border-white/50"
+                 :style="{ width: porcentajeXP + '%', boxShadow: '0 0 10px #00FF7F' }"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div class="max-w-md mx-auto px-4 mt-6 pb-28 space-y-6">
+
+      <!-- TOAST RECOMPENSA -->
+      <div v-if="estado.recompensaGanada"
+           class="fixed top-40 left-4 right-4 max-w-md mx-auto z-50 border-4 border-black rounded-2xl p-4 shadow-brutalXl animate-bounce-in text-center flex flex-col items-center"
+           :class="estado.recompensaGanada.pendiente
+             ? 'bg-gradient-to-r from-rpgBlue to-rpgPurple'
+             : 'bg-gradient-to-r from-rpgYellow via-rpgOrange to-rpgRed'">
+        <div class="text-5xl mb-2" :class="estado.recompensaGanada.pendiente ? '' : 'animate-spin'" style="animation-duration:3s">
+          {{ estado.recompensaGanada.pendiente ? '📜' : '⭐' }}
+        </div>
+        <p class="font-title text-white text-xl uppercase tracking-wider" style="text-shadow:2px 2px 0 #000">
+          {{ estado.recompensaGanada.pendiente ? '¡Gesta Marcada!' : '¡Recompensa Obtenida!' }}
+        </p>
+        <p v-if="estado.recompensaGanada.pendiente" class="text-blue-200 text-xs font-bold mt-1">
+          Aguarda el sello del Dungeon Master
+        </p>
+        <p v-if="estado.recompensaGanada.mensajeEspecial" class="text-rpgYellow text-sm font-black mt-1">
+          {{ estado.recompensaGanada.mensajeEspecial }}
+        </p>
+        <div class="flex gap-4 mt-2 bg-black/30 px-4 py-2 rounded-xl border-2 border-white/20">
+          <span class="font-black text-white text-lg drop-shadow-md">+{{ estado.recompensaGanada.monedas }} 🪙</span>
+          <span class="font-black text-white text-lg drop-shadow-md">+{{ estado.recompensaGanada.xp }} XP ⭐</span>
+        </div>
+      </div>
+
+      <!-- ===== VISTA: MISIONES ===== -->
+      <template v-if="estado.vistaJugador === 'misiones'">
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <span class="text-3xl filter drop-shadow-md">📜</span>
+            <h2 class="font-title text-xl text-rpgYellow uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">Tablero de Gestas</h2>
+            <span class="bg-rpgYellow text-black font-black px-2.5 py-0.5 rounded-full border-2 border-black shadow-brutal ml-auto text-sm">{{ misionesDisponibles.length }}</span>
+          </div>
+
+          <div v-if="misionesDisponibles.length === 0" class="bg-rpgCard border-4 border-dashed border-gray-600 rounded-3xl p-8 text-center flex flex-col items-center shadow-brutal">
+            <div class="text-5xl mb-3 grayscale opacity-50">😴</div>
+            <p class="text-gray-400 font-bold">El reino descansa en calma oscura.<br/>¡Que el Dungeon Master forje nuevas gestas!</p>
+          </div>
+
+          <div class="space-y-4">
+            <div v-for="mision in misionesDisponibles" :key="mision.id"
+                 class="mission-item relative bg-gradient-to-br from-[#2a365c] to-rpgCard border-4 border-black rounded-3xl p-5 shadow-brutalLg group overflow-hidden">
+              <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -translate-y-16 translate-x-16 pointer-events-none"></div>
+              <div class="relative z-10">
+                <div class="flex justify-between items-start mb-2">
+                  <h3 class="font-title text-white text-lg leading-tight w-4/5" style="text-shadow:1px 1px 0 #000">{{ mision.titulo }}</h3>
+                  <button @click="leerMision(mision)"
+                          class="bg-rpgBlue border-2 border-black rounded-full w-10 h-10 flex items-center justify-center text-white shadow-brutal active:translate-y-1 active:shadow-none transition-all flex-shrink-0">
+                    🔊
+                  </button>
+                </div>
+                <p v-if="mision.descripcion" class="text-rpgBlue text-sm font-medium mb-3 bg-black/30 p-2 rounded-xl border border-black/20">{{ mision.descripcion }}</p>
+                <div class="flex items-center gap-3 mb-4">
+                  <div class="flex items-center gap-1.5 bg-black/50 rounded-xl px-3 py-2 border-2 border-rpgYellow shadow-brutalInset">
+                    <span class="text-lg">🪙</span><span class="text-rpgYellow font-black text-sm">+{{ mision.recompensa_monedas }}</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 bg-black/50 rounded-xl px-3 py-2 border-2 border-rpgGreen shadow-brutalInset">
+                    <span class="text-lg">⭐</span><span class="text-rpgGreen font-black text-sm">+{{ mision.recompensa_xp }} XP</span>
+                  </div>
+                </div>
+                <!-- Botón explícito de aceptar gesta -->
+                <button @click="estado.gestaPendiente = mision"
+                        class="btn-3d w-full bg-rpgOrange border-4 border-black rounded-2xl py-2.5 font-title text-black text-base shadow-brutal uppercase tracking-wider">
+                  ⚔️ Aceptar Gesta
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mis misiones activas -->
+        <div v-if="misionesTomadasJugador.length > 0" class="pt-6 mt-6 border-t-4 border-dashed border-gray-600">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="text-3xl filter drop-shadow-md">⚔️</span>
+            <h2 class="font-title text-xl text-rpgBlue uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">Gestas Juradas</h2>
+          </div>
+          <div class="space-y-4">
+            <div v-for="mision in misionesTomadasJugador" :key="'m'+mision.id"
+                 class="bg-rpgCard border-4 rounded-3xl p-4 flex flex-col gap-3 shadow-brutal"
+                 :class="mision.estado === 'completada_jugador' ? 'border-rpgGreen bg-gradient-to-r from-rpgCard to-[rgba(0,255,127,0.1)]' : 'border-rpgOrange bg-gradient-to-r from-rpgCard to-[rgba(255,107,53,0.1)]'">
+              <div class="flex gap-3">
+                <div class="w-12 h-12 rounded-xl border-2 border-black flex items-center justify-center text-2xl bg-black/40 flex-shrink-0">
+                  {{ mision.estado === 'completada_jugador' ? '✅' : '🔥' }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <h3 class="font-title text-white text-base leading-tight truncate">{{ mision.titulo }}</h3>
+                  <p class="text-xs font-bold mt-1 uppercase" :class="mision.estado === 'completada_jugador' ? 'text-rpgGreen' : 'text-rpgOrange'">
+                    {{ mision.estado === 'completada_jugador' ? 'Aguardando el sello del Creador...' : '⚔️ En campaña — ¡honor o muerte!' }}
+                  </p>
+                </div>
+                <!-- Botón TTS: el aventurero puede escuchar las instrucciones -->
+                <button @click="leerMision(mision)"
+                        class="flex-shrink-0 w-9 h-9 bg-rpgBlue border-2 border-black rounded-full flex items-center justify-center text-white shadow-brutal active:translate-y-1 active:shadow-none transition-all self-start"
+                        title="Escuchar instrucciones">
+                  🔊
+                </button>
+              </div>
+              <button v-if="mision.estado === 'pendiente_validacion'"
+                      @click="completarMision(mision)"
+                      class="btn-3d w-full bg-rpgGreen text-black border-4 border-black rounded-xl py-3 font-title text-lg shadow-brutal uppercase tracking-wider">
+                ¡Gesta Cumplida! ✔️
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ===== VISTA: TIENDA ===== -->
+      <template v-if="estado.vistaJugador === 'tienda'">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <span class="text-4xl drop-shadow-md">⛺</span>
+            <h2 class="font-title text-2xl text-rpgOrange uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">Mercado</h2>
+          </div>
+        </div>
+        <div class="flex gap-2 mb-6 bg-black/30 p-1.5 rounded-2xl border-2 border-black">
+          <button v-for="cat in [{id:'todos',label:'Todo'},{id:'privilegio',label:'⭐ Poderes'},{id:'avatar',label:'🎨 Ropa'},{id:'cofre',label:'📦 Cofres'}]"
+                  :key="cat.id" @click="tiendaCategoria = cat.id"
+                  class="flex-1 py-2 rounded-xl text-xs font-bold transition-all border-2"
+                  :class="tiendaCategoria===cat.id ? 'bg-rpgOrange text-black border-black shadow-brutal' : 'border-transparent text-gray-400'">
+            {{ cat.label }}
+          </button>
+        </div>
+
+        <!-- Sección especial cofres gacha (visible cuando filtro = cofre) -->
+        <div v-if="tiendaCategoria === 'cofre'" class="space-y-4 mb-4">
+          <div v-for="cofre in [{tipo:'madera',icono:'📦',nombre:'Cofre de Madera',precio:15,color:'border-amber-700',bg:'from-amber-900/30',desc:'Recompensas básicas: monedas y XP'},{tipo:'plata',icono:'🪦',nombre:'Cofre de Plata',precio:40,color:'border-gray-400',bg:'from-gray-600/30',desc:'Puede incluir cosméticos y comida para mascota'},{tipo:'oro',icono:'🏆',nombre:'Cofre de Oro',precio:100,color:'border-rpgYellow',bg:'from-yellow-600/30',desc:'Recompensas épicas garantizadas'}]"
+               :key="cofre.tipo"
+               class="relative bg-gradient-to-r to-rpgCard border-4 rounded-3xl p-5 overflow-hidden shadow-brutalLg"
+               :class="[cofre.color, cofre.bg]">
+            <div class="absolute top-0 right-0 w-24 h-24 bg-white opacity-5 rounded-full -translate-y-8 translate-x-8"></div>
+            <div class="flex items-center gap-4 relative z-10">
+              <div class="text-5xl animate-float" style="animation-duration:2s">{{ cofre.icono }}</div>
+              <div class="flex-1">
+                <p class="font-title text-white text-lg" style="text-shadow:1px 1px 0 #000">{{ cofre.nombre }}</p>
+                <p class="text-gray-400 text-xs font-bold mt-1">{{ cofre.desc }}</p>
+                <p class="text-rpgYellow font-black text-sm mt-2">{{ cofre.precio }} 🪙</p>
+              </div>
+              <button @click="comprarYAbrirCofre(cofre)"
+                      :disabled="estado.perfilActual.monedas < cofre.precio || estado.cofreAbriendo"
+                      class="btn-3d px-4 py-3 rounded-2xl border-4 border-black font-title text-sm uppercase shadow-brutal"
+                      :class="estado.perfilActual.monedas >= cofre.precio ? 'bg-rpgGreen text-black' : 'bg-gray-700 text-gray-500'">
+                {{ estado.cofreAbriendo && estado.cofreTipoActivo === cofre.tipo ? '✨...' : '¡Abrir!' }}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div v-for="item in tiendaItems.filter(i => tiendaCategoria==='todos' || i.categoria===tiendaCategoria)"
+               :key="item.id"
+               class="bg-rpgCard border-4 rounded-3xl p-4 flex flex-col gap-2 relative overflow-hidden group shadow-brutal"
+               :class="estado.perfilActual.monedas >= item.precio_monedas ? 'border-rpgOrange' : 'border-gray-700 opacity-70 grayscale'">
+            <div v-if="estado.perfilActual.monedas >= item.precio_monedas" class="absolute inset-0 bg-gradient-to-t from-rpgOrange/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
+            <div class="h-20 bg-black/40 border-2 border-black rounded-2xl flex items-center justify-center text-5xl mb-1 shadow-inner relative">
+              {{ item.icono }}
+              <div class="absolute -bottom-3 bg-rpgYellow text-black font-black text-sm px-2 py-0.5 rounded-lg border-2 border-black shadow-brutal">
+                {{ item.precio_monedas }} 🪙
+              </div>
+            </div>
+            <h3 class="font-title text-white text-sm text-center leading-tight mt-3">{{ item.nombre }}</h3>
+            <p v-if="item.descripcion" class="text-gray-400 text-[10px] text-center leading-tight font-bold">{{ item.descripcion }}</p>
+            <button @click="comprarItem(item)"
+                    :disabled="estado.perfilActual.monedas < item.precio_monedas || estado.comprando === item.id"
+                    class="btn-3d mt-auto w-full py-2 rounded-xl border-2 border-black font-black text-sm uppercase"
+                    :class="estado.perfilActual.monedas >= item.precio_monedas ? 'bg-rpgGreen text-black shadow-brutal' : 'bg-gray-800 text-gray-500'">
+              {{ estado.comprando === item.id ? '⏳' : 'Comprar' }}
+            </button>
+          </div>
+        </div>
+        <div v-if="tiendaItems.length === 0" class="bg-rpgCard border-4 border-dashed border-gray-700 rounded-3xl p-8 text-center mt-8 shadow-brutal">
+          <div class="text-5xl mb-2 opacity-50">🕸️</div>
+          <p class="text-gray-400 font-bold">El mercader no tiene objetos.<br>¡Vuelve pronto!</p>
+        </div>
+      </template>
+
+      <!-- ===== VISTA: SALA DE GREMIO ===== -->
+      <template v-if="estado.vistaJugador === 'sala'">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="text-4xl drop-shadow-md">🏰</span>
+          <h2 class="font-title text-2xl text-rpgPurple uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">La Taberna</h2>
+        </div>
+        <!-- Escenario 3D -->
+        <div class="bg-gradient-to-b from-[#1a0f2e] to-[#0a0514] border-4 border-rpgPurple rounded-3xl overflow-hidden shadow-brutalLg relative mb-4">
+          <canvas id="hall-canvas" class="w-full h-48 block"></canvas>
+          <div class="absolute top-2 right-2 bg-black/60 border border-rpgPurple rounded-lg px-2 py-1 flex items-center gap-1.5 z-20">
+            <div class="w-2 h-2 bg-rpgGreen rounded-full animate-pulse" style="box-shadow:0 0 8px #00FF7F"></div>
+            <span class="text-xs font-bold text-white">{{ Object.keys(jugadoresOnline).length }} Online</span>
+          </div>
+        </div>
+        <!-- Chat UI -->
+        <div class="bg-rpgCard border-4 border-black rounded-3xl shadow-brutal flex flex-col h-80 overflow-hidden">
+          <div class="bg-black/40 border-b-2 border-black p-3 text-center">
+            <span class="text-rpgPurple font-bold text-xs uppercase tracking-widest">💬 Chat del Reino</span>
+          </div>
+          <div id="chat-lista" class="flex-1 overflow-y-auto p-4 space-y-4">
+            <div v-if="chatMensajes.length === 0" class="text-center py-8 text-gray-500 font-bold">El silencio domina la taberna...</div>
+            <div v-for="msg in chatMensajes" :key="msg.id"
+                 class="flex gap-2 items-end animate-slide-up"
+                 :class="msg.perfil_id === estado.perfilActual.id ? 'flex-row-reverse' : ''">
+              <div class="w-8 h-8 rounded-xl border-2 border-black flex items-center justify-center font-title text-xs text-white shadow-brutal flex-shrink-0"
+                   :style="{ backgroundColor: msg.perfil_id === estado.perfilActual.id ? '#7B2FBE' : '#FF6B35' }">
+                {{ (msg.nombre||'?')[0].toUpperCase() }}
+              </div>
+              <div class="max-w-[75%]">
+                <p class="text-[10px] font-bold mb-1 opacity-70" :class="msg.perfil_id === estado.perfilActual.id ? 'text-right' : 'text-left'">
+                  {{ msg.perfil_id === estado.perfilActual.id ? 'Tú' : msg.nombre }}
+                </p>
+                <div class="flex items-end gap-1.5" :class="msg.perfil_id === estado.perfilActual.id ? 'flex-row-reverse' : ''">
+                  <div class="px-4 py-2 text-sm text-white border-2 border-black shadow-brutal"
+                       :class="msg.perfil_id === estado.perfilActual.id ? 'bg-rpgPurple rounded-2xl rounded-tr-none' : 'bg-rpgDarker rounded-2xl rounded-tl-none'">
+                    {{ msg.contenido }}
+                  </div>
+                  <button v-if="msg.contenido" @click="leerMensajeChat(msg)"
+                          class="btn-3d w-6 h-6 bg-rpgBlue border-2 border-black rounded-full flex items-center justify-center shadow-brutal text-white flex-shrink-0">
+                        <span class="text-[10px]">🔊</span>
+                  </button>
+                </div>
+                <p class="text-gray-600 text-[10px] mt-0.5" :class="msg.perfil_id === estado.perfilActual.id ? 'text-right' : ''">
+                  {{ new Date(msg.created_at).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}) }}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class="bg-black/60 border-t-2 border-black p-3 flex gap-2">
+            <input v-model="chatTexto" type="text" placeholder="Grita algo en la sala..."
+                   @keyup.enter="enviarMensajeChat"
+                   class="flex-1 bg-rpgDarker border-2 border-gray-600 focus:border-rpgPurple rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 outline-none" />
+            <button @click="enviarMensajeChat" :disabled="!chatTexto.trim()"
+                    class="btn-3d w-12 h-12 bg-rpgPurple border-2 border-black rounded-xl text-white shadow-brutal flex items-center justify-center disabled:opacity-50">
+              ➤
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <!-- ===== VISTA: PERFIL ===== -->
+      <template v-if="estado.vistaJugador === 'perfil'">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="text-4xl drop-shadow-md">🛡️</span>
+          <h2 class="font-title text-2xl text-rpgGreen uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">El Héroe</h2>
+        </div>
+        <!-- Cabecera perfil con foto -->
+        <div class="bg-rpgCard border-4 border-rpgGreen rounded-3xl p-6 shadow-brutalLg text-center relative overflow-hidden">
+          <div class="relative z-10">
+            <!-- Avatar: foto si existe, canvas mini reutilizado si no -->
+            <div class="w-24 h-24 mx-auto mb-1 rounded-3xl overflow-hidden border-4 shadow-brutal relative"
+                 :class="estado.perfilActual.avatar_url ? 'border-rpgYellow' : 'border-black'">
+
+              <!-- FOTO de perfil (prioridad absoluta cuando existe) -->
+              <img v-if="estado.perfilActual.avatar_url"
+                   :src="estado.perfilActual.avatar_url"
+                   class="w-full h-full object-cover"
+                   :alt="estado.perfilActual.nombre" />
+
+              <!-- AVATAR 3D: se muestra el mismo canvas mini del header
+                   Solo visible cuando NO hay foto. No creamos un segundo renderer. -->
+              <div v-else
+                   class="w-full h-full bg-gradient-to-b from-rpgPurple to-rpgDarker flex items-center justify-center">
+                <!-- Reflejo del avatar mini — usamos un emoji-fallback mientras
+                     el canvas mini está en el header (no puede duplicarse).
+                     Para ver el avatar completo usa el Espejo Mágico (✏️). -->
+                <div class="text-5xl select-none" style="filter:drop-shadow(0 0 8px rgba(123,47,190,0.8))">
+                  {{ avatarConfig.genero === 'F' ? '🧝‍♀️' : '🧑‍⚔️' }}
+                </div>
+              </div>
+
+              <!-- Overlay toque para cambiar foto — visible siempre -->
+              <label class="absolute inset-0 flex items-end justify-center pb-1 cursor-pointer bg-transparent active:bg-black/30 transition-colors">
+                <span class="text-[10px] font-bold text-white bg-black/60 px-2 py-0.5 rounded-full mb-1 select-none">
+                  📷 {{ estado.perfilActual.avatar_url ? 'Cambiar' : 'Añadir foto' }}
+                </span>
+                <input type="file" accept="image/*" class="hidden" @change="subirFotoPerfil" />
+              </label>
+            </div>
+
+            <!-- Botón eliminar foto -->
+            <button v-if="estado.perfilActual.avatar_url"
+                    @click="eliminarFotoPerfil"
+                    class="btn-3d mt-2 mb-2 bg-rpgRed border-2 border-black text-white text-xs font-bold px-4 py-1.5 rounded-xl shadow-brutal uppercase tracking-wider">
+              🗑️ Quitar foto
+            </button>
+            <div v-else class="h-2"></div>
+
+            <h2 class="font-title text-3xl text-white mb-1" style="text-shadow:2px 2px 0 #000">{{ estado.perfilActual.nombre }}</h2>
+            <div class="inline-block bg-black/50 border-2 border-rpgGreen px-3 py-1 rounded-full mb-4 shadow-brutalInset">
+              <p class="text-rpgGreen font-black text-sm uppercase tracking-wider">Nivel {{ estado.perfilActual.nivel }}</p>
+            </div>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="bg-black/40 border-2 border-black rounded-2xl p-3 shadow-brutalInset">
+                <p class="text-2xl mb-1">🪙</p>
+                <p class="font-title text-rpgYellow text-lg">{{ estado.perfilActual.monedas }}</p>
+                <p class="text-gray-500 text-[10px] uppercase font-bold">Oro</p>
+              </div>
+              <div class="bg-black/40 border-2 border-black rounded-2xl p-3 shadow-brutalInset">
+                <p class="text-2xl mb-1">⭐</p>
+                <p class="font-title text-rpgGreen text-lg">{{ estado.perfilActual.xp }}</p>
+                <p class="text-gray-500 text-[10px] uppercase font-bold">Poder</p>
+              </div>
+              <div class="bg-black/40 border-2 border-black rounded-2xl p-3 shadow-brutalInset">
+                <p class="text-2xl mb-1">📜</p>
+                <p class="font-title text-rpgBlue text-lg">{{ estado.perfilActual.misiones_completadas || 0 }}</p>
+                <p class="text-gray-500 text-[10px] uppercase font-bold">Éxitos</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra XP -->
+        <div class="bg-rpgCard border-2 border-gray-700 rounded-2xl p-4 shadow-brutal">
+          <div class="flex justify-between mb-2">
+            <span class="text-xs font-black text-rpgGreen uppercase tracking-wider">Progreso Nivel {{ estado.perfilActual.nivel }}</span>
+            <span class="text-xs text-white font-title">{{ porcentajeXP.toFixed(0) }}%</span>
+          </div>
+          <div class="h-5 bg-black rounded-full border-4 border-gray-800 overflow-hidden shadow-brutalInset mb-1">
+            <div class="xp-bar-fill h-full rounded-full bg-rpgGreen animate-stripes bar-stripes" :style="{ width: porcentajeXP + '%' }"></div>
+          </div>
+          <div class="flex justify-between text-[10px] text-gray-600 font-bold">
+            <span>Nv. {{ estado.perfilActual.nivel }}</span>
+            <span>{{ estado.perfilActual.xp }} / {{ xpParaSiguienteNivel }} XP</span>
+            <span>Nv. {{ estado.perfilActual.nivel + 1 }}</span>
+          </div>
+        </div>
+
+        <!-- Tabs del perfil -->
+        <div class="flex gap-2 bg-black/30 p-1.5 rounded-2xl border-2 border-black">
+          <button v-for="t in [{id:'stats',icon:'⚔️',label:'Stats'},{id:'trofeos',icon:'🏆',label:'Trofeos'},{id:'cofre',icon:'📦',label:'Cofre'},{id:'mascota',icon:'🐾',label:'Mascota'}]"
+                  :key="t.id" @click="estado.vistaPerfilTab = t.id"
+                  class="flex-1 py-2 rounded-xl text-sm font-bold transition-all border-2 flex items-center justify-center gap-1"
+                  :class="estado.vistaPerfilTab===t.id ? 'bg-rpgGreen text-black border-black shadow-brutal' : 'border-transparent text-gray-400'">
+            {{ t.icon }} {{ t.label }}
+          </button>
+        </div>
+
+        <!-- TAB: ATRIBUTOS / STATS -->
+        <div v-if="estado.vistaPerfilTab === 'stats'" class="bg-rpgCard border-4 border-rpgPurple rounded-3xl p-5 shadow-brutal space-y-4">
+          <h3 class="font-title text-rpgPurple text-base uppercase tracking-widest mb-3">⚔️ Atributos del Héroe</h3>
+          <div v-for="stat in statsCalculados" :key="stat.key"
+               class="flex items-center gap-3">
+            <span class="text-2xl w-8 text-center">{{ stat.icon }}</span>
+            <div class="flex-1">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-black uppercase tracking-wider" :class="stat.color">{{ stat.label }}</span>
+                <span class="font-title text-white text-sm">{{ stat.valor }}</span>
+              </div>
+              <div class="h-3 bg-black rounded-full border-2 border-gray-800 overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-700"
+                     :class="stat.barColor"
+                     :style="{ width: Math.min(100, (stat.valor / stat.max) * 100) + '%' }"></div>
+              </div>
+            </div>
+            <div class="w-8 text-right">
+              <span class="text-[10px] text-gray-600 font-bold uppercase">{{ stat.abrev }}</span>
+            </div>
+          </div>
+          <p class="text-gray-600 text-[10px] text-center font-bold pt-2 border-t border-gray-800">
+            Los atributos crecen +2 con cada nivel alcanzado
+          </p>
+        </div>
+
+        <!-- TAB: TROFEOS -->
+        <div v-if="estado.vistaPerfilTab === 'trofeos'">
+          <div class="grid grid-cols-2 gap-3">
+            <div v-for="logro in logros" :key="logro.id"
+                 class="border-4 rounded-2xl p-3 relative overflow-hidden"
+                 :class="logrosUsuario.includes(logro.id) ? 'bg-rpgCard border-rpgYellow shadow-brutal' : 'bg-black/40 border-gray-800 opacity-60 grayscale'">
+              <div v-if="logrosUsuario.includes(logro.id)" class="absolute -right-4 -top-4 w-12 h-12 bg-rpgYellow rotate-45 opacity-20"></div>
+              <div class="text-3xl mb-2">{{ logro.icono }}</div>
+              <p class="font-title text-white text-xs leading-tight mb-1">{{ logro.nombre }}</p>
+              <p class="text-rpgBlue text-[10px] font-bold leading-tight">{{ logro.descripcion }}</p>
+              <div v-if="!logrosUsuario.includes(logro.id)" class="mt-2 h-2 bg-black rounded-full border-2 border-gray-700 overflow-hidden">
+                <div class="h-full bg-gray-500" :style="{ width: Math.min(100, ((logro.condicion_tipo==='misiones_completadas' ? estado.perfilActual.misiones_completadas : logro.condicion_tipo==='nivel' ? estado.perfilActual.nivel : 0) / logro.condicion_valor) * 100) + '%' }"></div>
+              </div>
+            </div>
+          </div>
+          <div v-if="logros.length === 0" class="text-center py-8 text-gray-600 font-bold">Sin trofeos aún. ¡Completa gestas!</div>
+        </div>
+
+        <!-- TAB: COFRE DE PERTENENCIAS (Inventario) -->
+        <div v-if="estado.vistaPerfilTab === 'cofre'" class="space-y-3">
+          <div v-if="inventario.length === 0" class="bg-rpgCard border-4 border-dashed border-gray-700 rounded-3xl p-8 text-center shadow-brutal">
+            <div class="text-5xl mb-3 opacity-40">📦</div>
+            <p class="text-gray-400 font-bold">Tu cofre está vacío.<br/>¡Visita el Mercado, aventurero!</p>
+          </div>
+          <div v-else class="grid grid-cols-2 gap-3">
+            <div v-for="item in inventario" :key="item.item_nombre"
+                 class="bg-rpgCard border-4 border-rpgPurple/50 rounded-2xl p-4 flex flex-col items-center gap-2 shadow-brutal relative">
+              <!-- Badge de cantidad -->
+              <div v-if="item.cantidad > 1"
+                   class="absolute -top-2 -right-2 bg-rpgOrange border-2 border-black text-black font-title text-xs w-7 h-7 rounded-full flex items-center justify-center shadow-brutal">
+                ×{{ item.cantidad }}
+              </div>
+              <div class="text-4xl">{{ item.icono || '🎁' }}</div>
+              <p class="font-title text-white text-xs text-center leading-tight">{{ item.item_nombre }}</p>
+              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border"
+                    :class="item.categoria === 'avatar' ? 'text-rpgPurple border-rpgPurple/40' : 'text-rpgGreen border-rpgGreen/40'">
+                {{ item.categoria === 'avatar' ? '🎨 Cosmético' : '⭐ Poder' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: MASCOTA -->
+        <div v-if="estado.vistaPerfilTab === 'mascota'" class="space-y-4">
+          <!-- Sin mascota -->
+          <div v-if="!mascotaActiva" class="bg-rpgCard border-4 border-dashed border-rpgPurple/50 rounded-3xl p-8 text-center shadow-brutal">
+            <div class="text-6xl mb-3 animate-float">🥚</div>
+            <p class="font-title text-rpgPurple text-lg mb-2">Sin Compañero</p>
+            <p class="text-gray-400 text-sm font-bold">Compra un Huevo Misterioso en el Mercado para obtener tu compañero de aventuras.</p>
+          </div>
+
+          <!-- Con mascota -->
+          <div v-else class="bg-rpgCard border-4 border-rpgPurple rounded-3xl p-5 shadow-brutalLg relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-rpgPurple opacity-10 rounded-full -translate-y-8 translate-x-8"></div>
+            <div class="relative z-10 text-center">
+              <!-- Icono de la mascota según evolución -->
+              <div class="text-7xl mb-2 animate-float" style="animation-duration:3s;filter:drop-shadow(0 0 20px rgba(123,47,190,0.6))">
+                {{ iconoMascotaActual }}
+              </div>
+              <p class="font-title text-white text-2xl mb-1" style="text-shadow:2px 2px 0 #000">{{ mascotaActiva.nombre }}</p>
+              <p class="text-rpgPurple text-xs font-black uppercase tracking-wider mb-4">{{ nombreEtapaMascota }}</p>
+
+              <!-- Barra de hambre/energía -->
+              <div class="bg-black/50 border-2 border-rpgPurple/40 rounded-2xl p-4 mb-4 shadow-brutalInset">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-xs font-black text-rpgOrange uppercase tracking-wider">🍖 Nutrición</span>
+                  <span class="font-title text-white text-sm">{{ mascotaActiva.hambre }}/100</span>
+                </div>
+                <div class="h-4 bg-black rounded-full border-2 border-gray-800 overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-700"
+                       :class="mascotaActiva.hambre > 60 ? 'bg-rpgGreen' : mascotaActiva.hambre > 30 ? 'bg-rpgYellow' : 'bg-rpgRed'"
+                       :style="{ width: mascotaActiva.hambre + '%' }"></div>
+                </div>
+                <p class="text-gray-500 text-[10px] mt-1 font-bold text-center">
+                  {{ mascotaActiva.hambre < 20 ? '¡Tu compañero tiene hambre!' : mascotaActiva.hambre > 80 ? '¡Tu compañero está feliz!' : 'Tu compañero está bien' }}
+                </p>
+              </div>
+
+              <!-- Progreso hacia próxima evolución -->
+              <div class="bg-black/50 border-2 border-gray-700 rounded-xl p-3 mb-4">
+                <p class="text-xs text-gray-400 font-bold mb-1">Próxima evolución: {{ proximaEtapaMascota?.nombre || '¡Máximo nivel!' }}</p>
+                <div class="h-2 bg-black rounded-full border border-gray-700 overflow-hidden">
+                  <div class="h-full bg-rpgBlue rounded-full transition-all"
+                       :style="{ width: progresoEvolucion + '%' }"></div>
+                </div>
+              </div>
+
+              <!-- Botones -->
+              <div class="flex gap-3">
+                <button @click="alimentarMascota"
+                        :disabled="estado.perfilActual.monedas < 5"
+                        class="btn-3d flex-1 bg-rpgOrange border-4 border-black rounded-2xl py-3 font-title text-black shadow-brutal uppercase text-sm">
+                  🍖 Alimentar (5 🪙)
+                </button>
+                <button @click="estado.mascotaNombrando = true"
+                        class="btn-3d w-12 h-12 bg-rpgPurple border-2 border-black rounded-xl flex items-center justify-center text-white shadow-brutal text-lg">
+                  ✏️
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Racha de acceso -->
+          <div class="bg-rpgCard border-2 border-gray-700 rounded-2xl p-4 shadow-brutal">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-3xl">🔥</span>
+                <div>
+                  <p class="font-title text-white text-base">Racha Actual</p>
+                  <p class="text-gray-400 text-xs font-bold">Entra cada día para mantenerla</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="font-title text-rpgOrange text-3xl">{{ estado.perfilActual.racha_actual || 0 }}</p>
+                <p class="text-gray-500 text-[10px] font-bold uppercase">días</p>
+              </div>
+            </div>
+            <!-- Multiplicador de XP -->
+            <div class="mt-3 bg-black/40 rounded-xl px-3 py-2 flex items-center justify-between border border-gray-700">
+              <span class="text-xs text-gray-400 font-bold">⭐ Multiplicador XP</span>
+              <span class="font-title text-rpgGreen text-sm">×{{ (estado.perfilActual.multiplicador_xp || 1).toFixed(2) }}</span>
+            </div>
+            <!-- Días consecutivos visual -->
+            <div class="flex gap-1.5 mt-3 justify-center">
+              <div v-for="d in 7" :key="d"
+                   class="w-8 h-8 rounded-lg border-2 flex items-center justify-center text-sm font-black"
+                   :class="d <= (estado.perfilActual.racha_actual || 0) % 7 || (estado.perfilActual.racha_actual || 0) >= 7
+                     ? 'bg-rpgOrange border-black text-black' : 'bg-black/40 border-gray-700 text-gray-600'">
+                {{ d <= (estado.perfilActual.racha_actual || 0) % 7 || (estado.perfilActual.racha_actual || 0) >= 7 ? '🔥' : d }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Historial misiones (siempre visible debajo de las tabs) -->
+        <div class="bg-rpgCard border-2 border-gray-700 rounded-2xl p-4 shadow-brutal mt-2">
+          <h3 class="font-title text-gray-300 text-base mb-3">📋 Últimas Gestas</h3>
+          <div v-if="misioesHistorial.length === 0" class="text-center py-4 text-gray-600 text-sm font-bold">Aún no has completado gestas. ¡A aventurarse!</div>
+          <div v-else class="space-y-2">
+            <div v-for="m in misioesHistorial.slice(0,10)" :key="m.id"
+                 class="bg-rpgDarker rounded-xl px-3 py-2.5 flex items-center justify-between gap-2 border border-gray-700">
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-white truncate">{{ m.titulo }}</p>
+                <p class="text-xs text-gray-600">{{ new Date(m.updated_at).toLocaleDateString('es-CL') }}</p>
+              </div>
+              <div class="flex gap-2 flex-shrink-0">
+                <span class="text-xs text-rpgYellow font-bold">+{{ m.recompensa_monedas }}🪙</span>
+                <span class="text-xs text-rpgGreen font-bold">+{{ m.recompensa_xp }}⭐</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+    <!-- ===== VISTA: MAPA DEL REINO ===== -->
+      <template v-if="estado.vistaJugador === 'mapa'">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="text-4xl drop-shadow-md">🗺️</span>
+          <h2 class="font-title text-2xl text-rpgYellow uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">Mapa del Reino</h2>
+        </div>
+
+        <!-- SVG del mapa de progresión -->
+        <div class="bg-gradient-to-b from-[#0a0520] to-[#1a0a3e] border-4 border-rpgPurple rounded-3xl overflow-hidden shadow-brutalLg relative">
+          <svg viewBox="0 0 100 95" xmlns="http://www.w3.org/2000/svg" class="w-full" style="min-height:340px">
+            <!-- Fondo estrellas -->
+            <circle cx="10" cy="5"  r="0.4" fill="white" opacity="0.6"/>
+            <circle cx="90" cy="8"  r="0.3" fill="white" opacity="0.5"/>
+            <circle cx="30" cy="3"  r="0.3" fill="white" opacity="0.7"/>
+            <circle cx="75" cy="15" r="0.4" fill="white" opacity="0.4"/>
+            <circle cx="5"  cy="40" r="0.3" fill="white" opacity="0.6"/>
+            <circle cx="95" cy="55" r="0.4" fill="white" opacity="0.5"/>
+
+            <!-- Líneas de camino entre nodos -->
+            <polyline v-for="(nodo, i) in nodosMapaReino.slice(0,-1)" :key="'linea'+i"
+                      :points="`${nodo.x},${nodo.y} ${nodosMapaReino[i+1].x},${nodosMapaReino[i+1].y}`"
+                      :stroke="nodoDesbloqueado(nodosMapaReino[i+1]) ? '#7B2FBE' : '#2D1B4E'"
+                      stroke-width="1.5" stroke-dasharray="2,2" fill="none" />
+
+            <!-- Nodos -->
+            <g v-for="nodo in nodosMapaReino" :key="nodo.nivel">
+              <!-- Círculo base -->
+              <circle :cx="nodo.x" :cy="nodo.y" r="6.5"
+                      :fill="nodoDesbloqueado(nodo) ? '#7B2FBE' : '#1f2947'"
+                      :stroke="nodoDesbloqueado(nodo) ? '#FFD700' : '#2D1B4E'"
+                      stroke-width="1.5"/>
+              <!-- Glow para nodo actual -->
+              <circle v-if="nodoEsActual(nodo)" :cx="nodo.x" :cy="nodo.y" r="8"
+                      fill="none" stroke="#FFD700" stroke-width="0.8" opacity="0.6">
+                <animate attributeName="r" values="7;9;7" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0.6;0.1;0.6" dur="2s" repeatCount="indefinite"/>
+              </circle>
+              <!-- Icono del nodo -->
+              <text :x="nodo.x" :y="nodo.y + 2.5" text-anchor="middle" font-size="6"
+                    :opacity="nodoDesbloqueado(nodo) ? '1' : '0.3'">{{ nodo.icono }}</text>
+              <!-- Nivel requerido -->
+              <text :x="nodo.x" :y="nodo.y + 11" text-anchor="middle" font-size="3"
+                    :fill="nodoDesbloqueado(nodo) ? '#FFD700' : '#6b7280'" font-weight="bold">
+                Nv.{{ nodo.nivel }}
+              </text>
+              <!-- Nombre del lugar -->
+              <text :x="nodo.x" :y="nodo.y - 9" text-anchor="middle" font-size="2.8"
+                    :fill="nodoDesbloqueado(nodo) ? '#ffffff' : '#4b5563'"
+                    :font-weight="nodoEsActual(nodo) ? 'bold' : 'normal'">
+                {{ nodo.nombre }}
+              </text>
+            </g>
+
+            <!-- Avatar del jugador en su nodo actual -->
+            <text :x="nodoActual.x" :y="nodoActual.y - 14" text-anchor="middle" font-size="5">
+              {{ avatarConfig.genero === 'F' ? '🧝‍♀️' : '🧑‍⚔️' }}
+            </text>
+          </svg>
+
+          <!-- Leyenda de ubicación actual -->
+          <div class="absolute bottom-3 left-3 right-3 bg-black/70 rounded-2xl px-4 py-2 flex items-center justify-between border border-rpgPurple/40">
+            <div>
+              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Ubicación actual</p>
+              <p class="font-title text-white text-sm">{{ nodoActual.nombre }}</p>
+            </div>
+            <div class="text-right">
+              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Próximo destino</p>
+              <p class="font-title text-rpgYellow text-sm">{{ nodoSiguiente?.nombre || '¡Eres legendario!' }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info de recompensas por nodo -->
+        <div v-if="nodoSiguiente" class="bg-rpgCard border-4 border-rpgYellow/50 rounded-2xl p-4 shadow-brutal">
+          <h3 class="font-title text-rpgYellow text-sm uppercase tracking-wider mb-3">🏆 Al alcanzar {{ nodoSiguiente.nombre }}...</h3>
+          <div class="flex gap-3">
+            <div v-for="premio in nodoSiguiente.premios || []" :key="premio"
+                 class="flex-1 bg-black/40 border border-gray-700 rounded-xl p-2 text-center">
+              <p class="text-lg mb-1">{{ premio.icono }}</p>
+              <p class="text-[10px] text-gray-300 font-bold">{{ premio.desc }}</p>
+            </div>
+          </div>
+        </div>
+      </template>
+
+    </div><!-- /contenido principal -->
+
+    <!-- NAV INFERIOR -->
+    <div v-if="estado.perfilActual"
+         class="fixed bottom-4 left-4 right-4 z-40 max-w-md mx-auto bg-rpgCard border-4 border-black rounded-3xl p-2 shadow-brutalXl flex justify-around items-center">
+      <button v-for="tab in [{id:'misiones',icon:'📜',label:'Misiones'},{id:'tienda',icon:'⛺',label:'Mercado'},{id:'sala',icon:'🏰',label:'Taberna'},{id:'mapa',icon:'🗺️',label:'Mapa'},{id:'perfil',icon:'🛡️',label:'Héroe'}]"
+              :key="tab.id" @click="estado.vistaJugador = tab.id"
+              class="relative flex flex-col items-center gap-1 px-4 py-2 rounded-2xl transition-all w-1/4"
+              :class="estado.vistaJugador === tab.id ? 'bg-black/30' : ''">
+        <div v-if="estado.vistaJugador === tab.id" class="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-rpgYellow rounded-full" style="box-shadow:0 0 10px #FFD700"></div>
+        <span class="text-2xl transition-transform" :class="estado.vistaJugador === tab.id ? 'scale-125' : 'opacity-70 grayscale'" :style="estado.vistaJugador === tab.id ? 'filter:drop-shadow(0 0 8px rgba(255,215,0,0.8))' : ''">{{ tab.icon }}</span>
+        <span class="text-[10px] font-bold uppercase tracking-widest mt-1 transition-colors"
+              :class="estado.vistaJugador === tab.id ? 'text-rpgYellow' : 'text-gray-500'">{{ tab.label }}</span>
+      </button>
+    </div>
+  </div><!-- /vista principal -->
+
+  <!-- ==========================================
+       4. PANEL ADMIN MODAL
+  =========================================== -->
+  <div v-if="estado.perfilActual && estado.perfilActual.rol==='admin' && estado.panelAdmin"
+       class="fixed inset-0 z-50 overflow-y-auto bg-black/80 p-4" style="backdrop-filter:blur(8px)">
+    <div class="max-w-2xl mx-auto bg-rpgCard border-4 border-rpgPurple rounded-3xl shadow-brutalXl overflow-hidden flex flex-col">
+
+      <!-- Header Admin -->
+      <div class="bg-rpgPurple border-b-4 border-black p-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="text-4xl drop-shadow-md">👑</span>
+          <div>
+            <h1 class="font-title text-xl text-white uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">Tomo del Creador</h1>
+            <p class="text-rpgYellow text-xs font-bold">{{ estado.perfilActual.nombre }}</p>
+          </div>
+        </div>
+        <button @click="estado.panelAdmin = false" class="btn-3d bg-rpgRed border-2 border-black rounded-xl p-2 text-white font-black shadow-brutal">✕</button>
+      </div>
+
+      <div class="p-4 space-y-6">
+        <!-- Tabs Admin -->
+        <div class="flex gap-2 bg-black/40 p-2 rounded-2xl border-2 border-black shadow-brutalInset">
+          <button v-for="tab in adminTabs" :key="tab.id" @click="adminTabActivo = tab.id"
+                  class="flex-1 py-3 rounded-xl border-2 font-title text-sm transition-all"
+                  :class="adminTabActivo === tab.id ? 'bg-rpgPurple border-black text-white shadow-brutal' : 'border-transparent text-gray-400'">
+            {{ tab.icon }} {{ tab.label }}
+          </button>
+        </div>
+
+        <!-- TAB MISIONES -->
+        <div v-if="adminTabActivo === 'misiones'" class="space-y-6">
+          <div class="bg-rpgDarker border-4 border-rpgPurple rounded-2xl p-5 shadow-brutal">
+            <h2 class="font-title text-rpgPurple mb-4 text-lg">✨ Inscribir Nueva Gesta</h2>
+            <div class="space-y-3">
+              <input v-model="nuevaMision.titulo" type="text" placeholder="Nombre de la gesta..."
+                     class="w-full bg-black/50 border-2 border-gray-600 focus:border-rpgPurple rounded-xl px-4 py-3 text-white outline-none font-bold" />
+              <input v-model="nuevaMision.descripcion" type="text" placeholder="Detalles de la aventura..."
+                     class="w-full bg-black/50 border-2 border-gray-600 focus:border-rpgPurple rounded-xl px-4 py-3 text-white outline-none text-sm" />
+              <!-- Tipo de gesta -->
+              <div class="flex gap-2">
+                <button v-for="t in [{id:'normal',icon:'⚔️',label:'Normal'},{id:'sabiduria',icon:'🧙',label:'Sabiduría'}]"
+                        :key="t.id" @click="nuevaMision.tipo = t.id"
+                        class="flex-1 py-2 rounded-xl border-2 font-bold text-sm transition-all"
+                        :class="nuevaMision.tipo===t.id ? 'bg-rpgPurple border-black text-white shadow-brutal' : 'border-gray-600 text-gray-400'">
+                  {{ t.icon }} {{ t.label }}
+                </button>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div class="bg-black/50 border-2 border-gray-600 rounded-xl p-2 flex items-center gap-2 focus-within:border-rpgYellow transition-colors">
+                  <span class="text-xl">🪙</span>
+                  <input v-model.number="nuevaMision.recompensa_monedas" type="number" min="1" class="w-full bg-transparent text-rpgYellow font-title text-lg outline-none" />
+                </div>
+                <div class="bg-black/50 border-2 border-gray-600 rounded-xl p-2 flex items-center gap-2 focus-within:border-rpgGreen transition-colors">
+                  <span class="text-xl">⭐</span>
+                  <input v-model.number="nuevaMision.recompensa_xp" type="number" min="1" class="w-full bg-transparent text-rpgGreen font-title text-lg outline-none" />
+                </div>
+              </div>
+              <button @click="crearMision" :disabled="!nuevaMision.titulo || estado.guardando"
+                      class="btn-3d w-full bg-rpgPurple border-4 border-black rounded-xl py-3 font-title text-white shadow-brutal uppercase tracking-wider mt-2">
+                {{ estado.guardando ? 'Forjando...' : 'Publicar Misión' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-rpgOrange/10 border-4 border-rpgOrange rounded-2xl p-5 shadow-brutal">
+            <h2 class="font-title text-rpgOrange mb-4 flex items-center justify-between text-lg">
+              ⏳ Requieren tu sello
+              <span class="bg-rpgOrange text-black px-2 py-0.5 rounded-full text-sm font-black">{{ misionesPendientes.length }}</span>
+            </h2>
+            <div v-if="misionesPendientes.length === 0" class="text-center py-4 text-gray-500 font-bold">No hay héroes reclamando recompensas.</div>
+            <div class="space-y-3">
+              <div v-for="mision in misionesPendientes" :key="mision.id"
+                   class="bg-rpgCard border-2 border-rpgOrange rounded-xl p-4 flex flex-col gap-3 shadow-brutalInset">
+                <!-- Datos de la gesta -->
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <p class="font-title text-white text-base leading-tight">{{ mision.titulo }}</p>
+                    <p class="text-sm font-bold text-rpgYellow mt-1">{{ mision.recompensa_monedas }} 🪙 | {{ mision.recompensa_xp }} ⭐</p>
+                  </div>
+                  <span v-if="mision.estado==='completada_jugador'"
+                        class="flex-shrink-0 bg-rpgGreen/20 border border-rpgGreen text-rpgGreen text-xs font-black px-2 py-1 rounded-lg">
+                    ✅ Cumplida
+                  </span>
+                  <span v-else class="flex-shrink-0 bg-rpgOrange/20 border border-rpgOrange text-rpgOrange text-xs font-black px-2 py-1 rounded-lg">
+                    ⏳ En curso
+                  </span>
+                </div>
+
+                <!-- Aventurero que tomó/completó la gesta — cruce con tabla perfiles -->
+                <div class="flex items-center gap-2 bg-black/40 rounded-xl px-3 py-2 border border-gray-700">
+                  <span class="text-lg">🧙</span>
+                  <div>
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Aventurero</p>
+                    <p class="text-sm font-title text-white">
+                      {{ perfiles.find(p => p.id === mision.completado_por)?.nombre || '—' }}
+                    </p>
+                  </div>
+                  <div class="ml-auto text-right">
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Nivel</p>
+                    <p class="text-sm font-title text-rpgYellow">
+                      {{ perfiles.find(p => p.id === mision.completado_por)?.nivel ?? '—' }}
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Botones de acción admin -->
+                <div class="flex gap-2">
+                  <button @click="aprobarMision(mision)"
+                          :disabled="estado.aprobando === mision.id || estado.rechazandoMision === mision.id"
+                          class="btn-3d flex-1 bg-rpgGreen border-2 border-black text-black font-title py-2.5 rounded-xl shadow-brutal text-sm uppercase tracking-wider">
+                    {{ estado.aprobando === mision.id ? '⏳...' : '🔏 Sellar' }}
+                  </button>
+                  <button @click="rechazarMision(mision)"
+                          :disabled="estado.aprobando === mision.id || estado.rechazandoMision === mision.id"
+                          class="btn-3d flex-1 bg-rpgOrange border-2 border-black text-black font-title py-2.5 rounded-xl shadow-brutal text-sm uppercase tracking-wider">
+                    {{ estado.rechazandoMision === mision.id ? '⏳...' : '↩️ Rechazar' }}
+                  </button>
+                  <button @click="eliminarMisionAdmin(mision)"
+                          :disabled="estado.aprobando === mision.id || estado.rechazandoMision === mision.id"
+                          class="btn-3d w-12 bg-rpgRed border-2 border-black text-white font-title py-2.5 rounded-xl shadow-brutal text-sm flex items-center justify-center">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-rpgCard border-4 border-gray-600 rounded-2xl p-5 shadow-brutal">
+            <h2 class="font-title text-gray-400 mb-4 text-lg">📋 Gestas Disponibles en el Tablero ({{ misionesDisponibles.length }})</h2>
+            <div v-if="misionesDisponibles.length === 0" class="text-center py-4 text-gray-600 font-bold">Sin misiones.</div>
+            <div class="space-y-2">
+              <div v-for="mision in misionesDisponibles" :key="mision.id"
+                   class="bg-rpgDarker border border-gray-700 rounded-xl px-4 py-3 flex items-center justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm text-gray-300 truncate font-bold">{{ mision.titulo }}</p>
+                  <span v-if="mision.tipo==='sabiduria'" class="text-[10px] text-rpgBlue font-bold uppercase">🧙 Sabiduría</span>
+                </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="text-xs text-rpgYellow bg-black/40 px-2 py-0.5 rounded-full font-bold">🪙 {{ mision.recompensa_monedas }}</span>
+                  <span class="text-xs text-rpgGreen bg-black/40 px-2 py-0.5 rounded-full font-bold">⭐ {{ mision.recompensa_xp }}</span>
+                  <button @click="eliminarMisionAdmin(mision)"
+                          class="btn-3d w-8 h-8 bg-rpgRed/80 border border-black text-white rounded-lg flex items-center justify-center text-xs shadow-brutal">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB USUARIOS -->
+        <div v-if="adminTabActivo === 'usuarios'" class="space-y-6">
+          <div class="bg-rpgDarker border-4 border-rpgBlue rounded-2xl p-5 shadow-brutal">
+            <h2 class="font-title text-rpgBlue mb-4 text-lg">🧙 Reclutar Aventurero</h2>
+            <div class="space-y-3">
+              <input v-model="nuevoUsuario.nombre" type="text" placeholder="Nombre..."
+                     class="w-full bg-black/50 border-2 border-gray-600 focus:border-rpgBlue rounded-xl px-4 py-3 text-white outline-none font-bold" />
+              <div class="grid grid-cols-2 gap-3">
+                <select v-model="nuevoUsuario.rol" class="w-full bg-black/50 border-2 border-gray-600 rounded-xl px-4 py-3 text-white outline-none font-bold">
+                  <option value="jugador">Aventurero</option>
+                  <option value="admin">Maestro</option>
+                </select>
+                <input v-model="nuevoUsuario.pin" type="text" maxlength="4" placeholder="PIN Secreto"
+                       @input="nuevoUsuario.pin = nuevoUsuario.pin.replace(/\D/g,'').slice(0,4)"
+                       class="w-full bg-black/50 border-2 border-gray-600 rounded-xl px-4 py-3 text-white outline-none font-mono tracking-widest text-center text-lg" />
+              </div>
+              <div v-if="usuarioFeedback.msg"
+                   class="rounded-xl px-4 py-3 text-sm font-bold"
+                   :class="usuarioFeedback.ok ? 'bg-green-900/50 text-rpgGreen border border-rpgGreen/30' : 'bg-red-900/50 text-rpgRed border border-rpgRed/30'">
+                {{ usuarioFeedback.ok ? '✅' : '❌' }} {{ usuarioFeedback.msg }}
+              </div>
+              <button @click="crearUsuario" :disabled="!nuevoUsuario.nombre || nuevoUsuario.pin.length !== 4 || estado.guardandoUsuario"
+                      class="btn-3d w-full bg-rpgBlue border-4 border-black rounded-xl py-3 font-title text-white shadow-brutal uppercase tracking-wider mt-2">
+                {{ estado.guardandoUsuario ? '⏳ Creando...' : 'Crear Perfil' }}
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-rpgCard border-4 border-gray-600 rounded-2xl p-5 shadow-brutal">
+            <h2 class="font-title text-gray-300 text-lg mb-4">👥 Lista de Usuarios ({{ perfiles.length }})</h2>
+            <div class="space-y-3">
+              <div v-for="p in perfiles" :key="p.id" class="bg-rpgDarker border-2 border-gray-700 rounded-xl p-4">
+                <div class="flex items-center gap-3">
+                  <span class="text-3xl">{{ p.rol === 'admin' ? '👑' : '🧑‍🚀' }}</span>
+                  <div class="flex-1 min-w-0">
+                    <p class="font-title text-base text-white truncate">{{ p.nombre }}</p>
+                    <p class="text-xs font-bold text-gray-400 mt-1">Nv.{{ p.nivel }} · {{ p.monedas }}🪙 · PIN: {{ p.pin }}</p>
+                  </div>
+                  <button @click="editandoUsuario = editandoUsuario?.id === p.id ? null : {...p}"
+                          class="btn-3d bg-rpgBlue border-2 border-black text-white px-3 py-2 rounded-xl font-bold shadow-brutal">✏️</button>
+                  <button @click="iniciarEliminarUsuario(p)"
+                          class="btn-3d bg-rpgRed border-2 border-black text-white px-3 py-2 rounded-xl font-bold shadow-brutal">🗑️</button>
+                </div>
+                <!-- Edición inline -->
+                <div v-if="editandoUsuario && editandoUsuario.id === p.id" class="mt-4 pt-4 border-t-2 border-gray-700 space-y-3 bg-black/30 p-3 rounded-xl">
+                  <div class="grid grid-cols-2 gap-3">
+                    <div><label class="text-xs font-bold text-gray-400 block mb-1">Nombre</label>
+                      <input v-model="editandoUsuario.nombre" type="text" class="w-full bg-rpgDarker border-2 border-gray-600 rounded-lg px-3 py-2 text-white font-bold outline-none" /></div>
+                    <div><label class="text-xs font-bold text-gray-400 block mb-1">PIN</label>
+                      <input v-model="editandoUsuario.pin" type="text" maxlength="4" class="w-full bg-rpgDarker border-2 border-gray-600 rounded-lg px-3 py-2 text-white font-mono outline-none" /></div>
+                    <div><label class="text-xs font-bold text-gray-400 block mb-1">🪙 Monedas</label>
+                      <input v-model.number="editandoUsuario.monedas" type="number" class="w-full bg-rpgDarker border-2 border-gray-600 rounded-lg px-3 py-2 text-rpgYellow font-bold outline-none" /></div>
+                    <div><label class="text-xs font-bold text-gray-400 block mb-1">⭐ XP</label>
+                      <input v-model.number="editandoUsuario.xp" type="number" class="w-full bg-rpgDarker border-2 border-gray-600 rounded-lg px-3 py-2 text-rpgGreen font-bold outline-none" /></div>
+                    <div><label class="text-xs font-bold text-gray-400 block mb-1">🏆 Nivel</label>
+                      <input v-model.number="editandoUsuario.nivel" type="number" class="w-full bg-rpgDarker border-2 border-gray-600 rounded-lg px-3 py-2 text-rpgOrange font-bold outline-none" /></div>
+                    <div><label class="text-xs font-bold text-gray-400 block mb-1">Rol</label>
+                      <select v-model="editandoUsuario.rol" class="w-full bg-rpgDarker border-2 border-gray-600 rounded-lg px-3 py-2 text-white font-bold outline-none">
+                        <option value="jugador">🎮 Jugador</option>
+                        <option value="admin">👑 Admin</option>
+                      </select></div>
+                  </div>
+                  <div class="flex gap-2 pt-2">
+                    <button @click="editandoUsuario = null" class="btn-3d flex-1 py-2 rounded-xl border-2 border-gray-600 bg-gray-800 text-white font-bold shadow-brutal">Cancelar</button>
+                    <button @click="guardarEdicionUsuario" class="btn-3d flex-1 py-2 rounded-xl bg-rpgBlue border-2 border-black text-white font-black shadow-brutal text-sm uppercase">💾 Guardar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Eliminar Usuario -->
+  <div v-if="estado.eliminandoUsuario"
+       class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90" style="backdrop-filter:blur(4px)">
+    <div class="bg-rpgCard border-4 border-rpgRed rounded-3xl p-6 w-full max-w-xs shadow-brutalXl">
+      <h3 class="font-title text-rpgRed text-xl mb-2 text-center" style="text-shadow:2px 2px 0 #000">⚠️ Borrar Héroe</h3>
+      <p class="text-gray-300 font-bold text-sm mb-4 text-center">¿Eliminar a <strong class="text-white bg-rpgRed/20 px-2 py-0.5 rounded">{{ estado.eliminandoUsuario.nombre }}</strong>?</p>
+      <p class="text-xs text-gray-400 mb-2 text-center uppercase font-bold tracking-widest">PIN de Creador:</p>
+      <div class="flex justify-center gap-4 mb-4">
+        <div v-for="i in 4" :key="i" class="pin-dot" :class="{ filled: pinEliminar.length >= i }"></div>
+      </div>
+      <div v-if="pinEliminarError" class="text-rpgRed text-sm text-center mb-4 font-bold animate-shake bg-rpgRed/20 p-2 rounded-xl border border-rpgRed">{{ pinEliminarError }}</div>
+      <div class="grid grid-cols-3 gap-3 justify-items-center mb-6">
+        <button v-for="n in [1,2,3,4,5,6,7,8,9]" :key="n" class="pin-key" style="width:56px;height:56px;font-size:20px"
+                @click="pinEliminar.length < 4 && (pinEliminar += String(n))">{{ n }}</button>
+        <div></div>
+        <button class="pin-key" style="width:56px;height:56px;font-size:20px" @click="pinEliminar.length < 4 && (pinEliminar += '0')">0</button>
+        <button class="pin-key" style="width:56px;height:56px;font-size:16px;background:linear-gradient(to bottom,#FF4757,#c0392b)" @click="pinEliminar = pinEliminar.slice(0,-1)">⌫</button>
+      </div>
+      <div class="flex gap-3">
+        <button @click="estado.eliminandoUsuario = null; pinEliminar = ''; pinEliminarError = ''"
+                class="btn-3d flex-1 py-3 rounded-xl border-2 border-gray-600 bg-gray-800 text-white text-sm font-bold shadow-brutal">Cancelar</button>
+        <button @click="confirmarEliminarUsuario"
+                class="btn-3d flex-1 py-3 rounded-xl bg-rpgRed border-2 border-black text-white text-sm font-black shadow-brutal uppercase">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       5. MODAL EDITOR DE AVATAR (ESPEJO MÁGICO)
+  =========================================== -->
+  <div v-if="estado.avatarModal"
+       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90" style="backdrop-filter:blur(4px)">
+    <div class="bg-rpgCard border-4 border-rpgPurple rounded-3xl p-5 w-full max-w-sm shadow-brutalXl relative" style="max-height:90vh;overflow-y:auto">
+
+      <div class="absolute -top-3 -left-3 w-8 h-8 bg-rpgYellow rotate-45 border-4 border-black"></div>
+      <div class="absolute -top-3 -right-3 w-8 h-8 bg-rpgYellow rotate-45 border-4 border-black"></div>
+
+      <div class="flex items-center justify-between mb-4 mt-2">
+        <h2 class="font-title text-rpgPurple text-2xl uppercase" style="text-shadow:2px 2px 0 #000">Espejo Mágico</h2>
+        <!-- data-action para el listener nativo (funciona en Android GAS WebView) -->
+        <div data-action="cancelar-avatar" class="w-8 h-8 bg-rpgRed border-2 border-black rounded-lg flex items-center justify-center text-white font-black shadow-brutal cursor-pointer select-none">✕</div>
+      </div>
+
+      <!-- Canvas 3D -->
+      <div class="flex justify-center mb-4 relative">
+        <div class="absolute inset-0 bg-rpgPurple blur-2xl opacity-20 rounded-full pointer-events-none"></div>
+        <canvas id="avatar-canvas" width="220" height="240"
+                class="rounded-3xl border-4 border-black bg-gradient-to-b from-[#2a1a4a] to-black shadow-brutalInset cursor-grab active:cursor-grabbing relative z-10">
+        </canvas>
+        <p class="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-rpgYellow bg-black/50 px-2 rounded-full font-bold z-20 pointer-events-none tracking-widest uppercase">Arrastra para rotar</p>
+      </div>
+
+      <!-- Controles -->
+      <div class="bg-black/40 rounded-2xl p-3 border-2 border-gray-800 mb-4 shadow-brutalInset">
+        <!-- Tabs partes — :data-parte-tab con binding correcto -->
+        <div class="flex gap-2 mb-3" id="avatar-tabs-partes">
+          <div v-for="parte in avatarPartes" :key="parte.key"
+               :data-parte-tab="parte.key"
+               class="avatar-parte-tab flex-1 py-2 rounded-xl border-2 transition-all flex justify-center text-xl cursor-pointer select-none"
+               :class="avatarParteActiva === parte.key ? 'bg-rpgPurple border-black shadow-brutal' : 'bg-rpgDarker border-gray-600 grayscale opacity-60'">
+            <span class="pointer-events-none filter drop-shadow-md">{{ parte.icon }}</span>
+          </div>
+          <div data-parte-tab="estilo"
+               class="avatar-parte-tab flex-1 py-2 rounded-xl border-2 transition-all flex justify-center text-xl cursor-pointer select-none"
+               :class="avatarParteActiva === 'estilo' ? 'bg-rpgYellow border-black shadow-brutal' : 'bg-rpgDarker border-gray-600 grayscale opacity-60'">
+            <span class="pointer-events-none filter drop-shadow-md">🔮</span>
+          </div>
+        </div>
+
+        <p class="text-xs font-bold text-center uppercase tracking-wider mb-3"
+           :class="avatarParteActiva === 'estilo' ? 'text-rpgYellow' : 'text-rpgPurple'">
+          {{ avatarParteActiva === 'estilo' ? '🔮 Forma de cabeza' : (avatarPartes.find(p=>p.key===avatarParteActiva)?.icon + ' ' + avatarPartes.find(p=>p.key===avatarParteActiva)?.label) }}
+        </p>
+
+        <!-- Paleta de colores -->
+        <div v-if="avatarParteActiva !== 'estilo'">
+          <div class="grid grid-cols-5 gap-2" id="paleta-grid">
+            <div v-for="color in (paletasPorParte[avatarParteActiva] || [])" :key="color"
+                 :data-color="color"
+                 :data-parte="avatarParteActiva"
+                 class="avatar-color-btn w-full aspect-square rounded-xl border-4 cursor-pointer transition-transform hover:scale-110 flex items-center justify-center select-none"
+                 :class="avatarConfig[avatarParteActiva] === color ? 'border-white scale-110' : 'border-black shadow-brutal'"
+                 :style="{ backgroundColor: color }">
+              <span v-if="avatarConfig[avatarParteActiva] === color" class="text-white text-xs font-black drop-shadow-md pointer-events-none">✓</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estilos de cabeza -->
+        <div v-else class="grid grid-cols-3 gap-3">
+          <div v-for="estilo in estilosAvatar" :key="estilo.id"
+               :data-estilo="estilo.id"
+               class="avatar-estilo-btn py-4 rounded-xl border-4 flex flex-col items-center gap-1 cursor-pointer transition-all select-none"
+               :class="avatarConfig.estilo === estilo.id ? 'bg-rpgYellow/20 border-rpgYellow shadow-brutal' : 'bg-rpgDarker border-black'">
+            <span class="text-3xl pointer-events-none">{{ estilo.icon }}</span>
+            <span class="text-xs font-bold pointer-events-none" :class="avatarConfig.estilo === estilo.id ? 'text-rpgYellow' : 'text-gray-400'">{{ estilo.label }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Selector de género -->
+      <div class="flex gap-3 mb-4">
+        <div v-for="g in [{id:'M',icon:'🧑‍⚔️',label:'Guerrero'},{id:'F',icon:'🧝‍♀️',label:'Hechicera'}]"
+             :key="g.id"
+             :data-genero="g.id"
+             class="avatar-genero-btn flex-1 py-3 rounded-2xl border-4 flex flex-col items-center gap-1 cursor-pointer transition-all select-none"
+             :class="avatarConfig.genero === g.id ? 'bg-rpgPurple border-black shadow-brutal' : 'bg-rpgDarker border-gray-700 opacity-60'">
+          <span class="text-2xl pointer-events-none">{{ g.icon }}</span>
+          <span class="text-xs font-bold pointer-events-none" :class="avatarConfig.genero === g.id ? 'text-white' : 'text-gray-400'">{{ g.label }}</span>
+        </div>
+      </div>
+
+      <!-- Guardar (data-action para listener nativo) -->
+      <div data-action="guardar-avatar"
+           class="btn-3d w-full bg-rpgGreen border-4 border-black rounded-2xl py-4 font-title text-xl text-black text-center uppercase tracking-wider shadow-brutal cursor-pointer select-none">
+        {{ estado.guardandoAvatar ? 'Encantando...' : 'Guardar Aspecto' }}
+      </div>
+    </div>
+  </div>
+
+<!-- ==========================================
+       6. MODAL CONFIRMACIÓN ACEPTAR GESTA
+  =========================================== -->
+  <div v-if="estado.gestaPendiente"
+       class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90"
+       style="backdrop-filter:blur(6px)">
+    <div class="bg-rpgCard border-4 border-rpgOrange rounded-3xl p-6 w-full max-w-sm shadow-brutalXl animate-bounce-in relative overflow-hidden">
+      <!-- Decoración esquinas -->
+      <div class="absolute -top-3 -left-3 w-8 h-8 bg-rpgOrange rotate-45 border-4 border-black"></div>
+      <div class="absolute -top-3 -right-3 w-8 h-8 bg-rpgOrange rotate-45 border-4 border-black"></div>
+
+      <div class="text-center mb-5 mt-2">
+        <div class="text-6xl mb-3" style="filter:drop-shadow(0 0 20px rgba(255,107,53,0.8))">📜</div>
+        <h2 class="font-title text-rpgOrange text-2xl uppercase" style="text-shadow:2px 2px 0 #000">¿Juráis esta Gesta?</h2>
+        <p class="text-gray-400 text-sm mt-2 font-bold">Vuestro nombre quedará sellado en los anales del reino.</p>
+      </div>
+
+      <!-- Detalle de la misión -->
+      <div class="bg-black/50 border-2 border-rpgOrange/40 rounded-2xl p-4 mb-5 shadow-brutalInset">
+        <div class="flex items-start justify-between gap-2 mb-2">
+          <h3 class="font-title text-white text-lg leading-tight flex-1" style="text-shadow:1px 1px 0 #000">
+            {{ estado.gestaPendiente.titulo }}
+          </h3>
+          <!-- Botón TTS — kids-friendly: escucha la gesta antes de jurar -->
+          <button @click="leerMision(estado.gestaPendiente)"
+                  class="flex-shrink-0 w-10 h-10 bg-rpgBlue border-2 border-black rounded-full flex items-center justify-center text-white shadow-brutal active:translate-y-1 active:shadow-none transition-all"
+                  title="Escuchar la gesta">
+            🔊
+          </button>
+        </div>
+        <p v-if="estado.gestaPendiente.descripcion" class="text-rpgBlue text-xs font-bold mb-3 italic">
+          "{{ estado.gestaPendiente.descripcion }}"
+        </p>
+        <div class="flex gap-3">
+          <div class="flex items-center gap-1.5 bg-black/50 rounded-xl px-3 py-1.5 border-2 border-rpgYellow">
+            <span>🪙</span><span class="text-rpgYellow font-black text-sm">+{{ estado.gestaPendiente.recompensa_monedas }}</span>
+          </div>
+          <div class="flex items-center gap-1.5 bg-black/50 rounded-xl px-3 py-1.5 border-2 border-rpgGreen">
+            <span>⭐</span><span class="text-rpgGreen font-black text-sm">+{{ estado.gestaPendiente.recompensa_xp }} XP</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-3">
+        <button @click="estado.gestaPendiente = null"
+                :disabled="estado.aceptandoGesta"
+                class="btn-3d flex-1 py-3 rounded-2xl border-4 border-gray-600 bg-gray-800 text-white font-title shadow-brutal uppercase text-sm">
+          Declinar
+        </button>
+        <button @click="confirmarTomarGesta"
+                :disabled="estado.aceptandoGesta"
+                class="btn-3d flex-1 py-3 rounded-2xl bg-rpgOrange border-4 border-black text-black font-title shadow-brutal uppercase text-sm">
+          {{ estado.aceptandoGesta ? '⏳ Sellando...' : '⚔️ ¡Juro!' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+<!-- ==========================================
+       7. MODAL MATH QUEST (Desafío de Sabiduría)
+  =========================================== -->
+  <div v-if="estado.mathQuestActivo && mathQuest.preguntas.length"
+       class="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/95"
+       style="backdrop-filter:blur(8px)">
+    <div class="bg-rpgCard border-4 border-rpgBlue rounded-3xl p-6 w-full max-w-sm shadow-brutalXl relative overflow-hidden">
+      <div class="absolute -top-3 -left-3 w-8 h-8 bg-rpgBlue rotate-45 border-4 border-black"></div>
+      <div class="absolute -top-3 -right-3 w-8 h-8 bg-rpgBlue rotate-45 border-4 border-black"></div>
+
+      <!-- Header con progreso -->
+      <div class="flex items-center justify-between mb-4 mt-2">
+        <h2 class="font-title text-rpgBlue text-xl uppercase" style="text-shadow:2px 2px 0 #000">🧙 Desafío</h2>
+        <div class="flex items-center gap-2">
+          <span class="font-title text-white text-sm">{{ mathQuest.actual + 1 }}/{{ mathQuest.preguntas.length }}</span>
+          <div class="w-20 h-3 bg-black rounded-full border-2 border-gray-700 overflow-hidden">
+            <div class="h-full bg-rpgBlue rounded-full transition-all"
+                 :style="{ width: ((mathQuest.actual + 1) / mathQuest.preguntas.length * 100) + '%' }"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Puntaje acumulado -->
+      <div class="flex gap-3 mb-4">
+        <div class="bg-rpgGreen/20 border border-rpgGreen rounded-xl px-3 py-1 flex items-center gap-1">
+          <span class="text-rpgGreen font-black text-sm">✅ {{ mathQuest.correctas }}</span>
+        </div>
+        <div class="bg-rpgRed/20 border border-rpgRed rounded-xl px-3 py-1 flex items-center gap-1">
+          <span class="text-rpgRed font-black text-sm">❌ {{ mathQuest.incorrectas }}</span>
+        </div>
+      </div>
+
+      <!-- Pregunta actual -->
+      <div class="bg-black/50 border-4 border-rpgBlue/40 rounded-2xl p-6 mb-6 text-center shadow-brutalInset">
+        <p class="font-title text-white text-3xl" style="text-shadow:2px 2px 0 #000">
+          {{ mathQuest.preguntas[mathQuest.actual]?.enunciado }}
+        </p>
+      </div>
+
+      <!-- Opciones de respuesta -->
+      <div class="grid grid-cols-2 gap-3">
+        <button v-for="(op, idx) in mathQuest.preguntas[mathQuest.actual]?.opciones"
+                :key="idx"
+                @click="responderMathQuest(op)"
+                :disabled="mathQuest.respondida"
+                class="btn-3d py-4 rounded-2xl border-4 font-title text-lg transition-all"
+                :class="mathQuest.respondida
+                  ? (op === mathQuest.preguntas[mathQuest.actual].respuesta
+                      ? 'bg-rpgGreen border-black text-black'
+                      : (op === mathQuest.seleccion ? 'bg-rpgRed border-black text-white' : 'bg-gray-800 border-gray-700 text-gray-500'))
+                  : 'bg-rpgCard border-gray-600 text-white hover:border-rpgBlue shadow-brutal'">
+          {{ op }}
+        </button>
+      </div>
+
+      <!-- Feedback respuesta -->
+      <div v-if="mathQuest.respondida" class="mt-4 text-center">
+        <p class="font-title text-xl" :class="mathQuest.seleccion === mathQuest.preguntas[mathQuest.actual].respuesta ? 'text-rpgGreen' : 'text-rpgRed'">
+          {{ mathQuest.seleccion === mathQuest.preguntas[mathQuest.actual].respuesta ? '✨ ¡Correcto!' : '💀 ¡Incorrecto!' }}
+        </p>
+        <button @click="siguientePreguntaMath"
+                class="btn-3d mt-3 w-full py-3 bg-rpgBlue border-4 border-black rounded-2xl font-title text-white shadow-brutal uppercase">
+          {{ mathQuest.actual < mathQuest.preguntas.length - 1 ? 'Siguiente ➔' : '¡Terminar Desafío!' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+<!-- ==========================================
+       MODAL: BIENVENIDA MASCOTA (al comprar huevo)
+  =========================================== -->
+  <div v-if="estado.mascotaBienvenida"
+       class="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-black/95"
+       style="backdrop-filter:blur(10px)">
+    <div class="bg-rpgCard border-4 border-rpgPurple rounded-3xl p-8 w-full max-w-xs shadow-brutalXl text-center relative overflow-hidden animate-bounce-in">
+      <div class="absolute -top-3 -left-3 w-8 h-8 bg-rpgPurple rotate-45 border-4 border-black"></div>
+      <div class="absolute -top-3 -right-3 w-8 h-8 bg-rpgPurple rotate-45 border-4 border-black"></div>
+
+      <p class="text-rpgPurple font-title text-xs uppercase tracking-widest mb-3">✨ ¡Nuevo compañero!</p>
+
+      <!-- Huevo animado -->
+      <div class="text-8xl mb-2 animate-bounce" style="filter:drop-shadow(0 0 20px rgba(123,47,190,0.8))">
+        {{ estado.mascotaBienvenida.icono }}
+      </div>
+
+      <p class="font-title text-white text-2xl mb-1" style="text-shadow:2px 2px 0 #000">
+        ¡Un {{ estado.mascotaBienvenida.especie }}!
+      </p>
+      <p class="text-gray-400 text-sm font-bold mb-6 leading-relaxed">
+        Tu huevo ha llegado. Aliméntalo con <span class="text-rpgOrange font-black">🍖 Comida Mágica</span> para que crezca y evolucione en tu compañero de aventuras.
+      </p>
+
+      <!-- Resumen de etapas de evolución -->
+      <div class="bg-black/40 border-2 border-gray-700 rounded-2xl p-3 mb-6 text-left space-y-2">
+        <p class="text-[10px] text-gray-500 font-black uppercase tracking-widest text-center mb-2">Etapas de evolución</p>
+        <div class="flex justify-between items-center">
+          <span class="text-lg">🥚</span>
+          <div class="flex-1 h-0.5 bg-gray-700 mx-2"></div>
+          <span class="text-[10px] text-gray-400 font-bold">Hambre 0 — Huevo</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-lg">🐣</span>
+          <div class="flex-1 h-0.5 bg-rpgOrange/40 mx-2"></div>
+          <span class="text-[10px] text-rpgOrange font-bold">Hambre 25 — Eclosión</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-lg">🐲</span>
+          <div class="flex-1 h-0.5 bg-rpgGreen/40 mx-2"></div>
+          <span class="text-[10px] text-rpgGreen font-bold">Hambre 60 — Adulto</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-lg">🌟</span>
+          <div class="flex-1 h-0.5 bg-rpgYellow/40 mx-2"></div>
+          <span class="text-[10px] text-rpgYellow font-bold">Hambre 100 — Legendario</span>
+        </div>
+      </div>
+
+      <!-- Botón: ponerle nombre ahora -->
+      <button @click="estado.mascotaBienvenida = null; estado.mascotaNombrando = true"
+              class="btn-3d w-full bg-rpgPurple border-4 border-black rounded-2xl py-4 font-title text-white text-lg shadow-brutal uppercase mb-3">
+        ✏️ Ponerle nombre
+      </button>
+      <button @click="estado.mascotaBienvenida = null"
+              class="text-gray-500 text-sm font-bold underline">
+        Después le pongo nombre
+      </button>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: APERTURA DE COFRE GACHA
+  =========================================== -->
+  <div v-if="estado.cofreAbriendo || estado.cofreRecompensa"
+       class="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/95"
+       style="backdrop-filter:blur(8px)">
+    <div class="bg-rpgCard border-4 border-rpgYellow rounded-3xl p-8 w-full max-w-xs shadow-brutalXl text-center relative overflow-hidden">
+      <div class="absolute -top-3 -left-3 w-8 h-8 bg-rpgYellow rotate-45 border-4 border-black"></div>
+      <div class="absolute -top-3 -right-3 w-8 h-8 bg-rpgYellow rotate-45 border-4 border-black"></div>
+
+      <!-- Animación de apertura -->
+      <div v-if="estado.cofreAbriendo && !estado.cofreRecompensa">
+        <div class="text-8xl mb-4 animate-bounce">
+          {{ estado.cofreTipoActivo === 'oro' ? '🏆' : estado.cofreTipoActivo === 'plata' ? '🪦' : '📦' }}
+        </div>
+        <p class="font-title text-rpgYellow text-xl uppercase animate-pulse" style="text-shadow:2px 2px 0 #000">
+          Abriendo cofre...
+        </p>
+        <div class="flex justify-center gap-1 mt-4">
+          <div v-for="i in 3" :key="i" class="w-3 h-3 bg-rpgYellow rounded-full animate-bounce" :style="`animation-delay:${i*0.15}s`"></div>
+        </div>
+      </div>
+
+      <!-- Premio revelado -->
+      <div v-if="estado.cofreRecompensa" class="animate-bounce-in">
+        <p class="text-rpgYellow font-title text-sm uppercase tracking-widest mb-3">✨ ¡Premio obtenido!</p>
+        <div class="text-8xl mb-4" style="filter:drop-shadow(0 0 20px rgba(255,215,0,0.8))">
+          {{ estado.cofreRecompensa.icono }}
+        </div>
+        <p class="font-title text-white text-2xl mb-2" style="text-shadow:2px 2px 0 #000">
+          {{ estado.cofreRecompensa.descripcion }}
+        </p>
+        <div v-if="estado.cofreRecompensa.valor"
+             class="inline-block bg-black/50 border-2 border-rpgYellow rounded-xl px-4 py-2 mb-6">
+          <span class="font-title text-rpgYellow text-xl">
+            +{{ estado.cofreRecompensa.valor }}
+            {{ estado.cofreRecompensa.tipo_premio === 'monedas' ? '🪙' : estado.cofreRecompensa.tipo_premio === 'xp' ? '⭐ XP' : '🍖' }}
+          </span>
+        </div>
+        <button @click="cerrarCofre"
+                class="btn-3d w-full bg-rpgYellow border-4 border-black rounded-2xl py-4 font-title text-black text-xl shadow-brutal uppercase">
+          ¡Genial! 🎉
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: NOMBRAR MASCOTA
+  =========================================== -->
+  <div v-if="estado.mascotaNombrando"
+       class="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/90"
+       style="backdrop-filter:blur(6px)">
+    <div class="bg-rpgCard border-4 border-rpgPurple rounded-3xl p-6 w-full max-w-xs shadow-brutalXl">
+      <div class="text-center mb-5">
+        <div class="text-5xl mb-2">{{ iconoMascotaActual }}</div>
+        <h2 class="font-title text-rpgPurple text-xl uppercase" style="text-shadow:2px 2px 0 #000">¿Cómo se llamará?</h2>
+      </div>
+      <input v-model="mascotaNuevoNombre"
+             type="text" maxlength="20"
+             placeholder="Nombre de tu compañero..."
+             class="w-full bg-rpgDarker border-4 border-rpgPurple rounded-2xl px-4 py-3 text-white font-bold text-center text-lg outline-none mb-4" />
+      <div class="flex gap-3">
+        <button @click="estado.mascotaNombrando = false"
+                class="btn-3d flex-1 py-3 rounded-2xl border-4 border-gray-600 bg-gray-800 text-white font-title shadow-brutal uppercase text-sm">
+          Cancelar
+        </button>
+        <button @click="guardarNombreMascota"
+                :disabled="!mascotaNuevoNombre.trim()"
+                class="btn-3d flex-1 py-3 rounded-2xl bg-rpgPurple border-4 border-black text-white font-title shadow-brutal uppercase text-sm">
+          ✨ Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<script>
+// ============================================================
+// ⚙️ CONFIGURACIÓN
+// ============================================================
+const SUPABASE_URL = 'https://ptczeaprmjkljnltvnhy.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB0Y3plYXBybWprbGpubHR2bmh5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MTEzNDksImV4cCI6MjA5MjE4NzM0OX0.t0_d4IzmhCBrTBeTU7PPIquYPGBF51T4xn8xkjs8jtg';
+// ============================================================
+
+const { createApp, ref, reactive, computed, onMounted, onUnmounted, nextTick } = Vue;
+const { createPinia, defineStore } = Pinia;
+
+const pinia = createPinia();
+
+const useGameStore = defineStore('game', () => {
+  const estado = reactive({
+    cargando: true, perfilActual: null,
+    guardando: false, guardandoUsuario: false, guardandoAvatar: false,
+    aprobando: null, recompensaGanada: null, avatarModal: false,
+    vistaJugador: 'misiones',
+    panelAdmin: false,
+    comprando: null, eliminandoUsuario: null,
+    gestaPendiente: null,
+    aceptandoGesta: false,
+    rechazandoMision: null,
+    // Math Quest
+    mathQuestActivo: false,
+    mathQuestMision: null,
+    // Inventario / Perfil tabs
+    vistaPerfilTab: 'stats',
+    // ---- Feature 1: Mascotas ----
+    mascotaModal: false,       // modal de detalle/alimentar mascota
+    mascotaNombrando: false,   // modal para ponerle nombre al huevo
+    // ---- Feature 3: Cofre Gacha ----
+    cofreAbriendo: false,
+    cofreRecompensa: null,
+    cofreTipoActivo: null,
+    // ---- Mascota bienvenida ----
+    mascotaBienvenida: null,   // { especie, icono } — modal al obtener huevo
+  });
+  const animaciones = reactive({ xpFlash: false, coinSpin: false });
+  const loginState = reactive({
+    perfilSeleccionado: null, pin: '', error: false,
+    nombreIngresado: '', errorNombre: '',
+    sesionRecordada: null, recordar: false,
+    mostrarNuevoUsuario: false,
+    autoLoginEnProceso: false, // evita doble disparo
+  });
+  const nuevaMision = reactive({
+    titulo:'', descripcion:'', recompensa_monedas:10, recompensa_xp:20,
+    tipo: 'normal', // 'normal' | 'sabiduria'
+  });
+  const nuevoUsuario = reactive({ nombre:'', rol:'jugador', pin:'', monedas:0, xp:0, nivel:1 });
+  const usuarioFeedback = reactive({ msg:'', ok:false });
+  // género añadido a avatarConfig para bifurcar la malla 3D
+  const avatarConfig = reactive({
+    piel:'#FDBCB4', cabello:'#3D2314', ropa:'#FF6B35', pantalon:'#1A1A2E',
+    estilo:'A', genero:'M', // 'M' | 'F'
+  });
+
+  return {
+    estado, animaciones, loginState, nuevaMision, nuevoUsuario, usuarioFeedback, avatarConfig
+  };
+});
+
+const app = createApp({
+  setup() {
+    const store = useGameStore();
+    const estado = store.estado;
+    const animaciones = store.animaciones;
+    const loginState = store.loginState;
+    const nuevaMision = store.nuevaMision;
+    const nuevoUsuario = store.nuevoUsuario;
+    const usuarioFeedback = store.usuarioFeedback;
+    const avatarConfig = store.avatarConfig;
+
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // ---- Optimización Three.js (IntersectionObserver) ----
+    const canvasVisibility = reactive({
+      'avatar-mini': true,
+      'avatar-canvas': true,
+      'hall-canvas': true
+    });
+    let canvasObserver = null;
+
+    const editandoUsuario  = ref(null);
+    const pinEliminar      = ref('');
+    const pinEliminarError = ref('');
+    const jugadoresOnline  = ref({});
+    const modelosHall      = new Map();
+    let hallScene = null, hallRenderer = null, hallCamera = null, hallAnimId = null;
+
+    const tiendaItems      = ref([]);
+    const misioesHistorial = ref([]);
+    const logros           = ref([]);
+    const logrosUsuario    = ref([]);
+    const tiendaCategoria  = ref('todos');
+
+    // ---- Auto-Login kids-friendly ----
+    // Si existe sesión validada en localStorage, entra directamente sin PIN.
+    // El niño de 6 años solo toca su foto y entra. El PIN solo se pide
+    // la primera vez o si la sesión fue cerrada manualmente.
+    try {
+      const guardado = localStorage.getItem('lifeRpgSesion');
+      if (guardado) {
+        const datos = JSON.parse(guardado);
+        if (datos?.id && !loginState.autoLoginEnProceso) {
+          loginState.sesionRecordada = datos;
+          // Marcamos que el auto-login está pendiente; se ejecuta en onMounted
+          // después de que los perfiles estén cargados y frescos de Supabase
+          loginState.autoLoginEnProceso = true;
+        }
+      }
+    } catch(e) {}
+
+    const perfiles       = ref([]);
+    const misiones       = ref([]);
+    const adminTabActivo = ref('misiones');
+    const adminTabs = [
+      { id: 'misiones', icon: '📜', label: 'Gestas'       },
+      { id: 'usuarios', icon: '🧙', label: 'Aventureros'  },
+    ];
+
+    const avatarPartes   = [
+      { key:'piel',     icon:'🧑', label:'Tono de piel'  },
+      { key:'cabello',  icon:'💇', label:'Color de pelo' },
+      { key:'ropa',     icon:'👕', label:'Camisa'        },
+      { key:'pantalon', icon:'👖', label:'Pantalón'      },
+    ];
+    const estilosAvatar  = [
+      { id:'A', icon:'😊', label:'Redonda'  },
+      { id:'B', icon:'😎', label:'Cuadrada' },
+      { id:'C', icon:'🤩', label:'Ovalada'  },
+    ];
+    const avatarParteActiva = ref('piel');
+    const paletasPorParte   = {
+      piel:     ['#FDBCB4','#F0C8A0','#E8975A','#C67C4A','#A0522D','#8D5524','#6B3A2A','#4A2912','#3B1F0E','#2C1503'],
+      cabello:  ['#F5E642','#E8C84A','#D4A043','#D4834A','#A0522D','#3D2314','#1a1a1a','#2C2C2C','#E8E8E8','#C8A0C8'],
+      ropa:     ['#FF6B35','#FF4757','#FF2D78','#7B2FBE','#4B0082','#00B4FF','#0066CC','#00FF7F','#2ECC40','#FFD700'],
+      pantalon: ['#1A1A2E','#16213E','#2C3E50','#34495E','#555555','#8B4513','#4A235A','#0D3B0D','#1a0a3e','#000000'],
+    };
+
+    let canalRealtime = null;
+    let miniScene = null, miniRenderer = null, miniCamera = null;
+    let bigScene  = null, bigRenderer  = null, bigCamera  = null;
+    let avatarGrp = null, miniGrp = null;
+    let animId = null, miniAnimId = null;
+
+    // ---- Computadas ----
+    const misionesDisponibles    = computed(() => misiones.value.filter(m => m.estado === 'disponible'));
+    const misionesPendientes     = computed(() => misiones.value.filter(m => m.estado === 'pendiente_validacion' || m.estado === 'completada_jugador'));
+    const misionesTomadasJugador = computed(() => misiones.value.filter(m => (m.estado === 'pendiente_validacion' || m.estado === 'completada_jugador') && m.completado_por === estado.perfilActual?.id));
+    // XP necesario para alcanzar el nivel N: ((N-1) * 10)²
+    // Ej: Nv2 = 100xp | Nv3 = 400xp | Nv4 = 900xp | Nv5 = 1600xp
+    const xpParaSiguienteNivel = computed(() => {
+      if (!estado.perfilActual) return 100;
+      const nv = estado.perfilActual.nivel;
+      return Math.pow(nv * 10, 2); // umbral del SIGUIENTE nivel
+    });
+    const porcentajeXP = computed(() => {
+      if (!estado.perfilActual) return 0;
+      const nv  = estado.perfilActual.nivel;
+      const ini = Math.pow((nv - 1) * 10, 2); // XP al inicio del nivel actual
+      const fin = Math.pow(nv * 10, 2);         // XP al inicio del siguiente nivel
+      if (fin <= ini) return 100;
+      return Math.min(100, Math.max(0,
+        ((estado.perfilActual.xp - ini) / (fin - ini)) * 100
+      ));
+    });
+
+    // ---- Datos ----
+    async function cargarPerfiles() {
+      const { data } = await db.from('perfiles').select('*').order('rol');
+      perfiles.value = data || [];
+    }
+    async function cargarMisiones() {
+      const { data } = await db.from('misiones').select('*')
+        .in('estado',['disponible','pendiente_validacion','completada_jugador'])
+        .order('created_at',{ascending:false});
+      misiones.value = data || [];
+    }
+
+    // ---- Login ----
+    function seleccionarParaLogin(p) { loginState.perfilSeleccionado = p; loginState.pin = ''; loginState.error = false; }
+    function volverSeleccion() {
+      loginState.perfilSeleccionado = null; loginState.pin = ''; loginState.error = false;
+      loginState.nombreIngresado = ''; loginState.errorNombre = '';
+      try { const g = localStorage.getItem('lifeRpgSesion'); if (g) { loginState.sesionRecordada = JSON.parse(g); loginState.mostrarNuevoUsuario = false; } } catch(e) {}
+    }
+    function buscarPerfilPorNombre() {
+      const nombre = loginState.nombreIngresado.trim().toLowerCase();
+      if (!nombre) { loginState.errorNombre = 'Escribe tu nombre para continuar.'; return; }
+      const perfil = perfiles.value.find(p => p.nombre.toLowerCase() === nombre);
+      if (!perfil) { loginState.errorNombre = 'No encontramos ese nombre. ¿Está bien escrito?'; return; }
+      loginState.errorNombre = '';
+      seleccionarParaLogin(perfil);
+    }
+    function borrarDigito() { loginState.pin = loginState.pin.slice(0,-1); loginState.error = false; }
+
+    async function ingresarDigito(d) {
+      if (loginState.pin.length >= 4) return;
+      loginState.pin += d; loginState.error = false;
+      if (loginState.pin.length === 4) {
+        await new Promise(r => setTimeout(r, 180));
+        if (loginState.perfilSeleccionado.pin === loginState.pin) {
+          estado.perfilActual = { ...loginState.perfilSeleccionado };
+          if (loginState.recordar) { try { localStorage.setItem('lifeRpgSesion', JSON.stringify(estado.perfilActual)); } catch(e) {} }
+          loginState.pin = ''; loginState.mostrarNuevoUsuario = false;
+          if (estado.perfilActual.avatar_config && Object.keys(estado.perfilActual.avatar_config).length > 0) {
+            Object.assign(avatarConfig, estado.perfilActual.avatar_config);
+          }
+          iniciarEscuchaRealtime();
+          await nextTick();
+          iniciarAvatarMini();
+          cargarTienda();
+          cargarHistorialMisiones();
+          cargarInventario();
+          cargarLogros().then(verificarLogros);
+          cargarMascota();
+          cargarCofresRecompensas();
+          actualizarRacha(); // verifica y actualiza racha diaria
+        } else { loginState.error = true; loginState.pin = ''; }
+      }
+    }
+
+    function cerrarSesion() {
+      if (canalRealtime)  { db.removeChannel(canalRealtime); canalRealtime = null; }
+      if (animId)         { cancelAnimationFrame(animId); animId = null; }
+      if (miniAnimId)     { cancelAnimationFrame(miniAnimId); miniAnimId = null; }
+      if (hallAnimId)     { cancelAnimationFrame(hallAnimId); hallAnimId = null; }
+      if (bigRenderer)    { bigRenderer.dispose(); bigRenderer = null; }
+      if (miniRenderer)   { miniRenderer.dispose(); miniRenderer = null; }
+      if (hallRenderer)   { hallRenderer.dispose(); hallRenderer = null; }
+      miniGrp = null; avatarGrp = null;
+      modelosHall.clear(); hallScene = null;
+      jugadoresOnline.value = {};
+      estado.perfilActual = null;
+      loginState.perfilSeleccionado = null; loginState.pin = '';
+    }
+
+    // ---- THREE.JS ----
+    function buildCharacter(scene, existingGroup) {
+      if (existingGroup) scene.remove(existingGroup);
+      const grp = new THREE.Group();
+      const mat = (hex) => new THREE.MeshToonMaterial({ color: new THREE.Color(hex) });
+
+      const gPierna = new THREE.CylinderGeometry(0.11,0.09,0.65,8);
+      [-0.17,0.17].forEach(x => { const m = new THREE.Mesh(gPierna, mat(avatarConfig.pantalon)); m.position.set(x,-0.92,0); grp.add(m); });
+
+      const gZapato = new THREE.SphereGeometry(0.13,8,6);
+      [-0.17,0.17].forEach(x => { const m = new THREE.Mesh(gZapato, mat('#1a1a1a')); m.scale.set(1.1,0.6,1.3); m.position.set(x,-1.3,0.05); grp.add(m); });
+
+      const cuerpo = new THREE.Mesh(new THREE.BoxGeometry(0.58,0.68,0.34), mat(avatarConfig.ropa));
+      cuerpo.position.set(0,-0.33,0); grp.add(cuerpo);
+
+      const gBrazo = new THREE.CylinderGeometry(0.085,0.075,0.58,8);
+      [[-0.41,0.3],[0.41,-0.3]].forEach(([x,rz]) => {
+        const m = new THREE.Mesh(gBrazo, mat(avatarConfig.ropa)); m.rotation.z = rz; m.position.set(x,-0.38,0); grp.add(m);
+      });
+
+      const gMano = new THREE.SphereGeometry(0.10,8,8);
+      [-0.50,0.50].forEach(x => { const m = new THREE.Mesh(gMano, mat(avatarConfig.piel)); m.position.set(x,-0.70,0); grp.add(m); });
+
+      const cuello = new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.13,0.17,8), mat(avatarConfig.piel));
+      cuello.position.set(0,0.09,0); grp.add(cuello);
+
+      const headGeo = avatarConfig.estilo === 'B' ? new THREE.BoxGeometry(0.53,0.53,0.44) : new THREE.SphereGeometry(0.30,16,16);
+      const cabeza = new THREE.Mesh(headGeo, mat(avatarConfig.piel));
+      cabeza.position.set(0,0.50,0); grp.add(cabeza);
+
+      const gOjo = new THREE.SphereGeometry(0.052,8,8);
+      const matOjo = new THREE.MeshToonMaterial({ color:0x1a1a2e });
+      [-0.10,0.10].forEach(x => { const m = new THREE.Mesh(gOjo, matOjo); m.position.set(x,0.52,0.26); grp.add(m); });
+
+      const gBrillo = new THREE.SphereGeometry(0.018,6,6);
+      const matBrillo = new THREE.MeshToonMaterial({ color:0xffffff });
+      [-0.09,0.11].forEach(x => { const m = new THREE.Mesh(gBrillo, matBrillo); m.position.set(x,0.54,0.29); grp.add(m); });
+
+      const pts = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(-0.07,0.39,0.28), new THREE.Vector3(0,0.35,0.29), new THREE.Vector3(0.07,0.39,0.28)
+      ).getPoints(8);
+      grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({color:0x1a1a2e})));
+
+      if (avatarConfig.estilo !== 'B') {
+        const top = new THREE.Mesh(new THREE.SphereGeometry(0.32,16,8,0,Math.PI*2,0,Math.PI*0.5), mat(avatarConfig.cabello));
+        top.position.set(0,0.50,0); grp.add(top);
+        const fleq = new THREE.Mesh(new THREE.BoxGeometry(0.38,0.11,0.18), mat(avatarConfig.cabello));
+        fleq.rotation.x = -0.3; fleq.position.set(0,0.68,0.20); grp.add(fleq);
+      }
+
+      const cinturon = new THREE.Mesh(new THREE.BoxGeometry(0.60,0.07,0.36), mat('#8B6914'));
+      cinturon.position.set(0,-0.63,0); grp.add(cinturon);
+
+      // ---- Diferenciador de género (sutil, no estereotipado) ----
+      if (avatarConfig.genero === 'F') {
+        // Pelo más largo (segunda capa en la parte trasera)
+        if (avatarConfig.estilo !== 'B') {
+          const melena = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.31,0.26,0.45,12),
+            mat(avatarConfig.cabello)
+          );
+          melena.position.set(0,0.28,-0.08); grp.add(melena);
+        }
+        // Falda / detalle en lugar de pantalón recto
+        const falda = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.30,0.38,0.30,10),
+          mat(avatarConfig.pantalon)
+        );
+        falda.position.set(0,-0.78,0); grp.add(falda);
+      }
+
+      scene.add(grp);
+      return grp;
+    }
+
+    function iniciarAvatarMini() {
+      const canvas = document.getElementById('avatar-mini');
+      if (!canvas) return;
+      if (miniRenderer) { miniRenderer.dispose(); miniRenderer = null; }
+      if (miniAnimId)   { cancelAnimationFrame(miniAnimId); miniAnimId = null; }
+
+      miniRenderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+      miniRenderer.setSize(60,60);
+      miniRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+      miniScene  = new THREE.Scene();
+      miniCamera = new THREE.PerspectiveCamera(50,1,0.1,100);
+      miniCamera.position.set(0,0.1,2.9);
+      miniScene.add(new THREE.AmbientLight(0xffffff,0.8));
+      const dl = new THREE.DirectionalLight(0xffd700,1.2); dl.position.set(2,3,2); miniScene.add(dl);
+      miniGrp = buildCharacter(miniScene, miniGrp);
+
+      // RAF solo corre cuando el canvas es visible (IntersectionObserver lo controla)
+      function loop() {
+        if (!canvasVisibility['avatar-mini']) { miniAnimId = null; return; }
+        miniAnimId = requestAnimationFrame(loop);
+        if (miniGrp) miniGrp.rotation.y += 0.015;
+        miniRenderer && miniRenderer.render(miniScene, miniCamera);
+      }
+      loop();
+
+      // Observer: pausa cuando sale del viewport, reanuda cuando vuelve
+      if (canvasObserver) canvasObserver.observe(canvas);
+    }
+
+    async function abrirAvatarEditor() {
+      estado.avatarModal = true;
+      await nextTick();
+      const canvas = document.getElementById('avatar-canvas');
+      if (!canvas) return;
+      if (canvasObserver) canvasObserver.observe(canvas);
+      if (bigRenderer) { bigRenderer.dispose(); bigRenderer = null; if(animId){cancelAnimationFrame(animId);animId=null;} }
+      bigRenderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+      bigRenderer.setSize(220,240);
+      bigRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+      bigScene  = new THREE.Scene();
+      bigCamera = new THREE.PerspectiveCamera(45,220/240,0.1,100);
+      bigCamera.position.set(0,0,3.6);
+      bigScene.add(new THREE.AmbientLight(0xffffff,0.7));
+      const dl = new THREE.DirectionalLight(0xffd700,1.4); dl.position.set(3,4,3); bigScene.add(dl);
+      const bl = new THREE.DirectionalLight(0x7B2FBE,0.5); bl.position.set(-2,-1,-2); bigScene.add(bl);
+      avatarGrp = buildCharacter(bigScene, avatarGrp);
+      let drag = false, lastX = 0;
+
+      // Usamos addEventListener en lugar de .on* para poder removerlos correctamente
+      const onDown  = e => { drag = true;  lastX = e.clientX ?? e.touches?.[0]?.clientX ?? 0; };
+      const onUp    = ()  => { drag = false; };
+      const onMove  = e => {
+        if (!drag || !avatarGrp) return;
+        const x = e.clientX ?? e.touches?.[0]?.clientX ?? lastX;
+        avatarGrp.rotation.y += (x - lastX) * 0.012;
+        lastX = x;
+      };
+
+      canvas.addEventListener('mousedown',  onDown,  { passive: true });
+      canvas.addEventListener('touchstart', onDown,  { passive: true });
+      // En document para capturar el up aunque el dedo salga del canvas
+      document.addEventListener('mouseup',   onUp,   { passive: true });
+      document.addEventListener('touchend',  onUp,   { passive: true });
+      document.addEventListener('touchcancel', onUp, { passive: true });
+      canvas.addEventListener('mousemove',  onMove,  { passive: true });
+      canvas.addEventListener('touchmove',  onMove,  { passive: true });
+
+      // Guardar referencia para limpiarlos al cerrar el editor
+      canvas._dragCleanup = () => {
+        canvas.removeEventListener('mousedown',  onDown);
+        canvas.removeEventListener('touchstart', onDown);
+        document.removeEventListener('mouseup',   onUp);
+        document.removeEventListener('touchend',  onUp);
+        document.removeEventListener('touchcancel', onUp);
+        canvas.removeEventListener('mousemove',  onMove);
+        canvas.removeEventListener('touchmove',  onMove);
+      };
+      function loopBig() {
+        if (!canvasVisibility['avatar-canvas']) { animId = null; return; }
+        animId = requestAnimationFrame(loopBig);
+        if (!drag && avatarGrp) avatarGrp.rotation.y += 0.008;
+        bigRenderer && bigRenderer.render(bigScene, bigCamera);
+      }
+      loopBig();
+      setTimeout(_montarListenersAvatar, 100);
+    }
+
+    function cerrarAvatarEditor() {
+      estado.avatarModal = false;
+      _desmontarListenersAvatar();
+      if (animId) { cancelAnimationFrame(animId); animId = null; }
+      const canvas = document.getElementById('avatar-canvas');
+      if (canvas) {
+        if (canvasObserver) canvasObserver.unobserve(canvas);
+        // Limpiar drag listeners para evitar memory leaks y el bug de "pegado"
+        if (canvas._dragCleanup) { canvas._dragCleanup(); canvas._dragCleanup = null; }
+      }
+      if (bigRenderer) { bigRenderer.dispose(); bigRenderer = null; }
+    }
+
+    function _aplicarCambioAvatar() {
+      requestAnimationFrame(() => {
+        if (bigScene)  avatarGrp = buildCharacter(bigScene,  avatarGrp);
+        if (miniScene) miniGrp   = buildCharacter(miniScene, miniGrp);
+        if (canalRealtime && estado.perfilActual) {
+          canalRealtime.track({ id:estado.perfilActual.id, nombre:estado.perfilActual.nombre, config:{...avatarConfig}, nivel:estado.perfilActual.nivel });
+        }
+      });
+    }
+    function seleccionarColorAvatar(parte, color) { avatarConfig[parte] = color; _aplicarCambioAvatar(); }
+    function seleccionarEstiloAvatar(estiloId)    { avatarConfig.estilo = estiloId; _aplicarCambioAvatar(); }
+
+    let _avatarDocListener = null;
+    function _montarListenersAvatar() {
+      if (_avatarDocListener) { document.removeEventListener('pointerdown', _avatarDocListener); _avatarDocListener = null; }
+      _avatarDocListener = (e) => {
+        if (!estado.avatarModal) return;
+        const target = e.target;
+        const actionEl = target.closest('[data-action]');
+        if (actionEl) {
+          e.preventDefault();
+          const action = actionEl.dataset.action;
+          if (action === 'cancelar-avatar')    { cerrarAvatarEditor(); return; }
+          if (action === 'guardar-avatar')     { guardarAvatar(); return; }
+          if (action === 'cerrar-panel-admin') { estado.panelAdmin = false; return; }
+        }
+        const tabEl = target.closest('.avatar-parte-tab');
+        if (tabEl && tabEl.dataset.parteTab) { e.preventDefault(); avatarParteActiva.value = tabEl.dataset.parteTab; return; }
+        const colorEl = target.closest('.avatar-color-btn');
+        if (colorEl && colorEl.dataset.color && colorEl.dataset.parte) { e.preventDefault(); avatarConfig[colorEl.dataset.parte] = colorEl.dataset.color; _aplicarCambioAvatar(); return; }
+        const estiloEl = target.closest('.avatar-estilo-btn');
+        if (estiloEl && estiloEl.dataset.estilo) { e.preventDefault(); avatarConfig.estilo = estiloEl.dataset.estilo; _aplicarCambioAvatar(); return; }
+
+        const generoEl = target.closest('.avatar-genero-btn');
+        if (generoEl && generoEl.dataset.genero) { e.preventDefault(); avatarConfig.genero = generoEl.dataset.genero; _aplicarCambioAvatar(); return; }
+      };
+      document.addEventListener('pointerdown', _avatarDocListener, { passive: false });
+    }
+    function _desmontarListenersAvatar() {
+      if (_avatarDocListener) { document.removeEventListener('pointerdown', _avatarDocListener); _avatarDocListener = null; }
+    }
+    function actualizarAvatar() {
+      requestAnimationFrame(() => { if (bigScene) avatarGrp = buildCharacter(bigScene, avatarGrp); if (miniScene) miniGrp = buildCharacter(miniScene, miniGrp); });
+    }
+    async function guardarAvatar() {
+      estado.guardandoAvatar = true;
+      const cfg = { ...avatarConfig };
+      const { error } = await db.from('perfiles').update({ avatar_config: cfg }).eq('id', estado.perfilActual.id);
+      if (!error) { estado.perfilActual.avatar_config = cfg; cerrarAvatarEditor(); await nextTick(); iniciarAvatarMini(); }
+      estado.guardandoAvatar = false;
+    }
+
+    // ---- Voz ----
+    // ---- Helper voz: Android requiere cancelar + esperar 100ms antes de hablar ----
+    function _hablar(texto) {
+      if (!window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      setTimeout(() => {
+        const u = new SpeechSynthesisUtterance(texto);
+        // es-CL funciona mejor en dispositivos Android configurados en español de Chile
+        u.lang = 'es-CL'; u.rate = 0.88; u.pitch = 1.05; u.volume = 1;
+        // Intentar voz local primero (más rápida y funciona offline)
+        const voces = window.speechSynthesis.getVoices();
+        const vozCL = voces.find(v => v.lang === 'es-CL') ||
+                      voces.find(v => v.lang.startsWith('es')) ||
+                      voces[0];
+        if (vozCL) u.voice = vozCL;
+        window.speechSynthesis.speak(u);
+      }, 100); // 100ms de pausa — Android necesita procesar el evento de clic primero
+    }
+
+    function leerMision(mision) {
+      const texto = `Misión: ${mision.titulo}. ${mision.descripcion ? mision.descripcion + '.' : ''} Recompensa: ${mision.recompensa_monedas} monedas y ${mision.recompensa_xp} puntos de experiencia.`;
+      _hablar(texto);
+    }
+    function leerMensajeChat(msg) {
+      if (!msg.contenido) return;
+      _hablar(`${msg.nombre} dice: ${msg.contenido}`);
+    }
+
+    // ---- Misiones ----
+    async function crearMision() {
+      if (!nuevaMision.titulo.trim()) return;
+      estado.guardando = true;
+      await db.from('misiones').insert({
+        titulo: nuevaMision.titulo.trim(),
+        descripcion: nuevaMision.descripcion.trim()||null,
+        recompensa_monedas: nuevaMision.recompensa_monedas,
+        recompensa_xp: nuevaMision.recompensa_xp,
+        tipo: nuevaMision.tipo || 'normal',
+        estado: 'disponible',
+        creado_por: estado.perfilActual.id,
+      });
+      nuevaMision.titulo=''; nuevaMision.descripcion='';
+      nuevaMision.recompensa_monedas=10; nuevaMision.recompensa_xp=20; nuevaMision.tipo='normal';
+      await cargarMisiones();
+      estado.guardando = false;
+    }
+    // Fórmula de nivel: Nivel = floor(0.1 * sqrt(XP)) + 1
+    // Tabla de referencia: 0XP→Nv1 | 100XP→Nv2 | 400XP→Nv3 | 900XP→Nv4 | 2500XP→Nv6
+    function calcularNivel(xp) {
+      return Math.floor(0.1 * Math.sqrt(Math.max(0, xp))) + 1;
+    }
+
+    async function aprobarMision(mision) {
+      estado.aprobando = mision.id;
+
+      // Leer stats FRESCOS del servidor para evitar race conditions
+      // si se aprobaron dos gestas casi al mismo tiempo
+      const jugadorId = mision.completado_por
+        ?? perfiles.value.find(p => p.rol === 'jugador')?.id;
+      if (!jugadorId) { estado.aprobando = null; return; }
+
+      const { data: jugadorFresco, error: errLectura } = await db
+        .from('perfiles')
+        .select('id, xp, monedas, nivel, misiones_completadas, rol')
+        .eq('id', jugadorId)
+        .single();
+
+      if (errLectura || !jugadorFresco) { estado.aprobando = null; return; }
+
+      const nuevoXP       = jugadorFresco.xp + mision.recompensa_xp;
+      const nuevoNivel    = calcularNivel(nuevoXP);
+      const nuevasMonedas = jugadorFresco.monedas + mision.recompensa_monedas;
+      const misionesComp  = (jugadorFresco.misiones_completadas || 0) + 1;
+
+      // Actualizar perfil y marcar misión como completada en paralelo
+      const [{ error: errPerfil }, { error: errMision }] = await Promise.all([
+        db.from('perfiles').update({
+          xp: nuevoXP, nivel: nuevoNivel,
+          monedas: nuevasMonedas, misiones_completadas: misionesComp,
+        }).eq('id', jugadorId),
+        db.from('misiones').update({ estado:'completada' }).eq('id', mision.id),
+      ]);
+
+      if (!errPerfil && !errMision) {
+        // Actualizar estado local solo si la escritura fue exitosa
+        if (estado.perfilActual?.id === jugadorId) {
+          estado.perfilActual.xp               = nuevoXP;
+          estado.perfilActual.nivel             = nuevoNivel;
+          estado.perfilActual.monedas           = nuevasMonedas;
+          estado.perfilActual.misiones_completadas = misionesComp;
+        }
+        await Promise.all([cargarMisiones(), cargarPerfiles()]);
+        verificarLogros(); // Comprobar si se desbloquearon nuevos logros con los stats frescos
+      }
+
+      estado.aprobando = null;
+    }
+    async function tomarMision(mision) {
+      if (!estado.perfilActual) return;
+      await db.from('misiones').update({ estado:'pendiente_validacion', completado_por:estado.perfilActual.id }).eq('id', mision.id);
+      await cargarMisiones();
+    }
+
+    // Admin: devuelve la misión al tablero (disponible de nuevo)
+    async function rechazarMision(mision) {
+      estado.rechazandoMision = mision.id;
+      const { error } = await db.from('misiones')
+        .update({ estado: 'disponible', completado_por: null })
+        .eq('id', mision.id);
+      if (!error) await cargarMisiones();
+      estado.rechazandoMision = null;
+    }
+
+    // Admin: elimina definitivamente la misión (disponible o pendiente)
+    async function eliminarMisionAdmin(mision) {
+      // Confirmación mínima para evitar borrados accidentales
+      if (!confirm(`¿Eliminar la gesta "${mision.titulo}"? Esta acción no se puede deshacer.`)) return;
+
+      const { error, data } = await db
+        .from('misiones')
+        .delete()
+        .eq('id', mision.id)
+        .select(); // .select() fuerza a Supabase a retornar la fila eliminada
+                   // Si RLS bloquea el DELETE, error no es null aquí
+
+      if (error) {
+        console.error('Error eliminando misión:', error.message, error.code);
+        alert(`No se pudo eliminar: ${error.message}\n\nVerifica las políticas RLS en Supabase (tabla misiones, operación DELETE).`);
+        return;
+      }
+      await cargarMisiones();
+    }
+    async function confirmarTomarGesta() {
+      const mision = estado.gestaPendiente;
+      if (!mision || !estado.perfilActual) return;
+      estado.aceptandoGesta = true;
+      const { error } = await db.from('misiones')
+        .update({ estado:'pendiente_validacion', completado_por:estado.perfilActual.id })
+        .eq('id', mision.id)
+        .eq('estado', 'disponible'); // Guard: evita doble-aceptación concurrente
+      if (!error) {
+        await cargarMisiones();
+        estado.gestaPendiente = null;
+      }
+      estado.aceptandoGesta = false;
+    }
+    async function completarMision(mision) {
+      if (!estado.perfilActual) return;
+      const { error } = await db.from('misiones')
+        .update({ estado:'completada_jugador' })
+        .eq('id', mision.id);
+      if (!error) {
+        await cargarMisiones();
+        // Toast de confirmación: la gesta fue marcada, espera el sello del Creador
+        estado.recompensaGanada = {
+          xp:      mision.recompensa_xp,
+          monedas: mision.recompensa_monedas,
+          pendiente: true, // flag para diferenciar el mensaje
+        };
+        animaciones.xpFlash = true;
+        setTimeout(() => { animaciones.xpFlash = false; }, 2000);
+        setTimeout(() => { estado.recompensaGanada = null; }, 5000);
+      }
+    }
+
+    // ---- CRUD Usuarios ----
+    async function guardarEdicionUsuario() {
+      if (!editandoUsuario.value) return;
+      const { error } = await db.from('perfiles').update({ nombre:editandoUsuario.value.nombre, pin:editandoUsuario.value.pin, rol:editandoUsuario.value.rol, monedas:editandoUsuario.value.monedas, xp:editandoUsuario.value.xp, nivel:editandoUsuario.value.nivel }).eq('id', editandoUsuario.value.id);
+      if (!error) { editandoUsuario.value = null; await cargarPerfiles(); }
+    }
+    function iniciarEliminarUsuario(p) { estado.eliminandoUsuario = p; pinEliminar.value = ''; pinEliminarError.value = ''; }
+    async function confirmarEliminarUsuario() {
+      if (pinEliminar.value !== '1234') { pinEliminarError.value = 'PIN incorrecto.'; pinEliminar.value = ''; return; }
+      const { error } = await db.from('perfiles').delete().eq('id', estado.eliminandoUsuario.id);
+      if (!error) { estado.eliminandoUsuario = null; pinEliminar.value = ''; pinEliminarError.value = ''; await cargarPerfiles(); }
+    }
+    async function crearUsuario() {
+      if (!nuevoUsuario.nombre.trim() || nuevoUsuario.pin.length !== 4) return;
+      estado.guardandoUsuario = true; usuarioFeedback.msg = '';
+      const { error } = await db.from('perfiles').insert({ nombre:nuevoUsuario.nombre.trim(), rol:nuevoUsuario.rol, pin:nuevoUsuario.pin, monedas:nuevoUsuario.monedas, xp:nuevoUsuario.xp, nivel:nuevoUsuario.nivel, avatar_config:{} });
+      if (error) { usuarioFeedback.msg='Error al crear el usuario.'; usuarioFeedback.ok=false; }
+      else {
+        usuarioFeedback.msg=`¡"${nuevoUsuario.nombre}" creado!`; usuarioFeedback.ok=true;
+        nuevoUsuario.nombre=''; nuevoUsuario.pin=''; nuevoUsuario.monedas=0; nuevoUsuario.xp=0; nuevoUsuario.nivel=1; nuevoUsuario.rol='jugador';
+        await cargarPerfiles();
+        setTimeout(()=>{ usuarioFeedback.msg=''; },4000);
+      }
+      estado.guardandoUsuario = false;
+    }
+
+    // ---- Tienda / Perfil / Logros ----
+    async function cargarTienda() {
+      const { data } = await db.from('tienda_items').select('*').eq('disponible',true).order('precio_monedas');
+      tiendaItems.value = data || [];
+    }
+    async function cargarHistorialMisiones() {
+      const { data } = await db.from('misiones').select('*').in('estado',['completada','completada_jugador']).eq('completado_por',estado.perfilActual.id).order('updated_at',{ascending:false}).limit(50);
+      misioesHistorial.value = data || [];
+    }
+    async function cargarLogros() {
+      const { data: todos } = await db.from('logros').select('*');
+      logros.value = todos || [];
+      const { data: desbloqueados } = await db.from('perfil_logros').select('*').eq('perfil_id',estado.perfilActual.id);
+      logrosUsuario.value = (desbloqueados||[]).map(l => l.logro_id);
+    }
+    async function verificarLogros() {
+      const p = estado.perfilActual;
+      for (const logro of logros.value) {
+        if (logrosUsuario.value.includes(logro.id)) continue;
+        let ok = false;
+        if (logro.condicion_tipo === 'misiones_completadas' && p.misiones_completadas >= logro.condicion_valor) ok = true;
+        if (logro.condicion_tipo === 'nivel' && p.nivel >= logro.condicion_valor) ok = true;
+        if (ok) {
+          await db.from('perfil_logros').upsert({ perfil_id:p.id, logro_id:logro.id },{ onConflict:'perfil_id,logro_id', ignoreDuplicates:true });
+          logrosUsuario.value.push(logro.id);
+        }
+      }
+    }
+    async function comprarItem(item) {
+      if (estado.perfilActual.monedas < item.precio_monedas) return;
+      estado.comprando = item.id;
+      const nuevasMonedas = estado.perfilActual.monedas - item.precio_monedas;
+      const { error } = await db.from('compras').insert({
+        perfil_id: estado.perfilActual.id,
+        item_id: item.id,
+        item_nombre: item.nombre,
+        precio_pagado: item.precio_monedas
+      });
+      if (!error) {
+        await db.from('perfiles').update({
+          monedas: nuevasMonedas,
+          monedas_gastadas: (estado.perfilActual.monedas_gastadas || 0) + item.precio_monedas
+        }).eq('id', estado.perfilActual.id);
+        estado.perfilActual.monedas = nuevasMonedas;
+
+        // Detectar categoría especial del ítem
+        if (item.categoria === 'mascota' && item.nombre.toLowerCase().includes('huevo')) {
+          // Si ya tiene mascota no le damos otra (un compañero por jugador)
+          if (!mascotaActiva.value) {
+            await darMascotaAleatoria();
+            // Ir automáticamente al tab Mascota para que vea el huevo
+            estado.vistaJugador  = 'perfil';
+            estado.vistaPerfilTab = 'mascota';
+          } else {
+            // Ya tiene mascota — el huevo se convierte en comida extra
+            const nuevaHambre = Math.min(100, mascotaActiva.value.hambre + 10);
+            await db.from('mascotas_perfil')
+              .update({ hambre: nuevaHambre, ultima_alim: new Date().toISOString() })
+              .eq('id', mascotaActiva.value.id);
+            mascotaActiva.value.hambre = nuevaHambre;
+          }
+        }
+
+        if (item.categoria === 'mascota' && item.nombre.toLowerCase().includes('comida')) {
+          if (mascotaActiva.value) {
+            const nuevaHambre = Math.min(100, mascotaActiva.value.hambre + 20);
+            await db.from('mascotas_perfil')
+              .update({ hambre: nuevaHambre, ultima_alim: new Date().toISOString() })
+              .eq('id', mascotaActiva.value.id);
+            mascotaActiva.value.hambre = nuevaHambre;
+            // Ir al tab mascota para ver el efecto
+            estado.vistaJugador   = 'perfil';
+            estado.vistaPerfilTab = 'mascota';
+          }
+        }
+      }
+      estado.comprando = null;
+    }
+
+    // ---- Realtime + Presence ----
+    function iniciarEscuchaRealtime() {
+      if (!db || canalRealtime) return;
+      canalRealtime = db.channel('life-rpg-room', { config:{ presence:{ key:estado.perfilActual.id } } })
+      .on('postgres_changes',{ event:'UPDATE',schema:'public',table:'perfiles',filter:`id=eq.${estado.perfilActual.id}` }, (payload) => {
+        const nd = payload.new;
+        const xpG = nd.xp - estado.perfilActual.xp, mnG = nd.monedas - estado.perfilActual.monedas;
+        if (xpG > 0 || mnG > 0) {
+          estado.recompensaGanada = { xp:xpG, monedas:mnG };
+          animaciones.xpFlash = animaciones.coinSpin = true;
+          setTimeout(()=>{ animaciones.xpFlash=animaciones.coinSpin=false; },2000);
+          setTimeout(()=>{ estado.recompensaGanada=null; },4000);
+        }
+        Object.assign(estado.perfilActual, nd);
+      })
+      .on('postgres_changes',{ event:'*',schema:'public',table:'misiones' }, ()=>cargarMisiones())
+      .on('postgres_changes',{ event:'INSERT',schema:'public',table:'chat_mensajes' }, async (payload) => {
+        chatMensajes.value.push(payload.new);
+        await nextTick(); _scrollChatAbajo();
+      })
+      .on('presence',{ event:'sync' }, () => {
+        jugadoresOnline.value = { ...canalRealtime.presenceState() };
+        if (hallScene) actualizarSala3D(jugadoresOnline.value);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await canalRealtime.track({ id:estado.perfilActual.id, nombre:estado.perfilActual.nombre, config:{...avatarConfig}, nivel:estado.perfilActual.nivel });
+        }
+      });
+    }
+
+    // ---- Sala 3D ----
+    function actualizarSala3D(presencia) {
+      if (!hallScene) return;
+      for (const [id,grp] of modelosHall.entries()) { if (!presencia[id]) { hallScene.remove(grp); modelosHall.delete(id); } }
+      const ids = Object.keys(presencia);
+      ids.forEach((id,index) => {
+        const datos = presencia[id][0]; if (!datos) return;
+        const cfgPropia = { ...avatarConfig };
+        Object.assign(avatarConfig, datos.config || {});
+        const grp = buildCharacter(hallScene, modelosHall.get(id));
+        grp.position.x = (index - (ids.length-1)/2) * 1.6; grp.position.y = 0; grp.scale.setScalar(0.55);
+        modelosHall.set(id, grp);
+        Object.assign(avatarConfig, cfgPropia);
+      });
+    }
+    async function iniciarSala3D() {
+      await nextTick();
+      const canvas = document.getElementById('hall-canvas');
+      if (!canvas) return;
+      if (canvasObserver) canvasObserver.observe(canvas);
+      if (hallRenderer) { hallRenderer.dispose(); hallRenderer = null; if(hallAnimId){cancelAnimationFrame(hallAnimId);} }
+      hallRenderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+      const w = canvas.clientWidth || 340, h = 192;
+      hallRenderer.setSize(w, h); hallRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+      hallScene  = new THREE.Scene();
+      hallCamera = new THREE.PerspectiveCamera(50, w/h, 0.1, 100);
+      hallCamera.position.set(0, 0.5, 4.5);
+      hallScene.add(new THREE.AmbientLight(0xffffff,0.6));
+      const dl = new THREE.DirectionalLight(0xffd700,1.2); dl.position.set(3,5,3); hallScene.add(dl);
+      const bl = new THREE.DirectionalLight(0x7B2FBE,0.4); bl.position.set(-3,0,-2); hallScene.add(bl);
+      const suelo = new THREE.Mesh(new THREE.PlaneGeometry(10,4), new THREE.MeshToonMaterial({ color:new THREE.Color('#1a0a3e') }));
+      suelo.rotation.x = -Math.PI/2; suelo.position.y = -0.88; hallScene.add(suelo);
+      actualizarSala3D(jugadoresOnline.value);
+      function loopHall() {
+        if (!canvasVisibility['hall-canvas']) { hallAnimId = null; return; }
+        hallAnimId = requestAnimationFrame(loopHall);
+        for (const grp of modelosHall.values()) grp.rotation.y += 0.004;
+        hallRenderer && hallRenderer.render(hallScene, hallCamera);
+      }
+      loopHall();
+    }
+
+    // ---- Chat ----
+    const chatMensajes = ref([]);
+    const chatTexto    = ref('');
+
+    async function cargarHistorialChat() {
+      const { data } = await db.from('chat_mensajes').select('*').order('created_at').limit(100);
+      chatMensajes.value = data || [];
+      await nextTick(); _scrollChatAbajo();
+    }
+    function _scrollChatAbajo() { const el = document.getElementById('chat-lista'); if (el) el.scrollTop = el.scrollHeight; }
+    async function enviarMensajeChat() {
+      const texto = chatTexto.value.trim();
+      if (!texto || !estado.perfilActual) return;
+      chatTexto.value = '';
+      await db.from('chat_mensajes').insert({ perfil_id:estado.perfilActual.id, nombre:estado.perfilActual.nombre, tipo:'texto', contenido:texto });
+    }
+
+    // ---- Inventario ----
+    const inventario = ref([]); // array de { item_nombre, icono, categoria, cantidad }
+
+    async function cargarInventario() {
+      if (!estado.perfilActual) return;
+
+      // Join con tienda_items para traer icono y categoría en una sola query
+      // Evita la dependencia del orden de carga con cargarTienda()
+      const { data } = await db.from('compras')
+        .select('item_nombre, item_id, precio_pagado, tienda_items(icono, categoria, nombre)')
+        .eq('perfil_id', estado.perfilActual.id)
+        .order('created_at', { ascending: false });
+
+      if (!data) { inventario.value = []; return; }
+
+      // Agrupar por item_nombre con datos del join
+      const mapa = {};
+      data.forEach(c => {
+        const key = c.item_nombre;
+        if (!mapa[key]) {
+          const def = c.tienda_items || {};
+          mapa[key] = {
+            item_nombre: c.item_nombre,
+            icono:       def.icono     || '🎁',
+            categoria:   def.categoria || 'privilegio',
+            cantidad:    0,
+          };
+        }
+        mapa[key].cantidad++;
+      });
+      inventario.value = Object.values(mapa).sort((a,b) => b.cantidad - a.cantidad);
+    }
+
+    // ---- Foto de perfil ----
+    async function eliminarFotoPerfil() {
+      if (!estado.perfilActual) return;
+      const { error } = await db.from('perfiles')
+        .update({ avatar_url: null })
+        .eq('id', estado.perfilActual.id);
+      if (!error) {
+        estado.perfilActual.avatar_url = null;
+        try { localStorage.setItem('lifeRpgSesion', JSON.stringify(estado.perfilActual)); } catch(e) {}
+        // Reanimar el avatar 3D del perfil que quedó debajo
+        await nextTick();
+        // El canvas ya está en el DOM, solo necesitamos que Three.js lo use
+        if (!miniScene) iniciarAvatarMini(); // reconstruye si no existe
+      }
+    }
+
+    async function subirFotoPerfil(event) {
+      const file = event.target.files?.[0];
+      if (!file || !estado.perfilActual) return;
+      // Convertir a base64 y guardar en avatar_url (Supabase Storage no disponible en CDN)
+      // Alternativa simple: guardar URL de Data URI — suficiente para fotos de 200x200px
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const dataUrl = reader.result;
+        const { error } = await db.from('perfiles')
+          .update({ avatar_url: dataUrl })
+          .eq('id', estado.perfilActual.id);
+        if (!error) {
+          estado.perfilActual.avatar_url = dataUrl;
+          try { localStorage.setItem('lifeRpgSesion', JSON.stringify(estado.perfilActual)); } catch(e) {}
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ---- Stats (Fuerza, Vitalidad, Magia) ----
+    // STR: +2/nivel — bonifica gestas físicas futuras
+    // VIT: +2/nivel — base para barra de vida futura
+    // MAG: +2/nivel — requisito para Math Quests y ítems premium
+    const statsCalculados = computed(() => {
+      const nv = estado.perfilActual?.nivel ?? 1;
+      const base = (nv - 1) * 2; // Nivel 1 = 0, Nivel 2 = 2, etc.
+      const max = 99 * 2; // nivel máximo 99
+      return [
+        { key:'str', icon:'⚔️', label:'Fuerza',    abrev:'STR', valor:base + 5, max, color:'text-rpgRed',    barColor:'bg-rpgRed'    },
+        { key:'vit', icon:'🛡️', label:'Vitalidad', abrev:'VIT', valor:base + 8, max, color:'text-rpgGreen',  barColor:'bg-rpgGreen'  },
+        { key:'mag', icon:'🔮', label:'Magia',      abrev:'MAG', valor:base + 3, max, color:'text-rpgBlue',   barColor:'bg-rpgBlue'   },
+      ];
+    });
+
+    // ---- Math Quest ----
+    const mathQuest = reactive({
+      preguntas:   [],
+      actual:      0,
+      correctas:   0,
+      incorrectas: 0,
+      seleccion:   null,
+      respondida:  false,
+    });
+
+    function _generarPregunta() {
+      const tipos = ['suma','resta','comparacion'];
+      const tipo  = tipos[Math.floor(Math.random() * tipos.length)];
+      let enunciado, respuesta, opciones;
+
+      const a = Math.floor(Math.random() * 20) + 1;
+      const b = Math.floor(Math.random() * 20) + 1;
+
+      if (tipo === 'suma') {
+        enunciado = `${a} + ${b} = ?`;
+        respuesta = a + b;
+        opciones  = [respuesta, respuesta + 1, respuesta - 1, respuesta + 2]
+                      .sort(() => Math.random() - 0.5);
+      } else if (tipo === 'resta') {
+        const [mayor, menor] = a >= b ? [a, b] : [b, a];
+        enunciado = `${mayor} − ${menor} = ?`;
+        respuesta = mayor - menor;
+        opciones  = [respuesta, respuesta + 1, respuesta - 1, respuesta + 3]
+                      .map(v => Math.max(0, v))
+                      .sort(() => Math.random() - 0.5);
+      } else {
+        enunciado = `¿Cuál es mayor? ${a} ó ${b}`;
+        respuesta = Math.max(a, b);
+        opciones  = [a, b, Math.max(a,b)+1, Math.min(a,b)-1 < 0 ? 0 : Math.min(a,b)-1]
+                      .sort(() => Math.random() - 0.5);
+      }
+      return { enunciado, respuesta, opciones };
+    }
+
+    function iniciarMathQuest(mision) {
+      mathQuest.preguntas   = Array.from({ length: 10 }, _generarPregunta);
+      mathQuest.actual      = 0;
+      mathQuest.correctas   = 0;
+      mathQuest.incorrectas = 0;
+      mathQuest.seleccion   = null;
+      mathQuest.respondida  = false;
+      estado.mathQuestMision = mision;
+      estado.mathQuestActivo = true;
+      estado.gestaPendiente  = null;
+    }
+
+    function responderMathQuest(opcion) {
+      if (mathQuest.respondida) return;
+      mathQuest.seleccion   = opcion;
+      mathQuest.respondida  = true;
+      const correcta = opcion === mathQuest.preguntas[mathQuest.actual].respuesta;
+      if (correcta) mathQuest.correctas++;
+      else          mathQuest.incorrectas++;
+    }
+
+    async function siguientePreguntaMath() {
+      if (mathQuest.actual < mathQuest.preguntas.length - 1) {
+        mathQuest.actual++;
+        mathQuest.seleccion  = null;
+        mathQuest.respondida = false;
+      } else {
+        // Desafío terminado — recompensa proporcional a correctas
+        const porcentaje  = mathQuest.correctas / mathQuest.preguntas.length;
+        const mision      = estado.mathQuestMision;
+        estado.mathQuestActivo = false;
+
+        if (porcentaje >= 0.5 && mision) {
+          // Al menos 5/10 correctas para reclamar la gesta
+          await completarMision(mision);
+          // Toast especial
+          estado.recompensaGanada = {
+            xp: Math.round(mision.recompensa_xp * porcentaje),
+            monedas: Math.round(mision.recompensa_monedas * porcentaje),
+          };
+          setTimeout(() => { estado.recompensaGanada = null; }, 4000);
+        }
+        estado.mathQuestMision = null;
+      }
+    }
+
+    // Modificar confirmarTomarGesta para detectar gestas de sabiduría
+    async function confirmarTomarGesta() {
+      const mision = estado.gestaPendiente;
+      if (!mision || !estado.perfilActual) return;
+
+      if (mision.tipo === 'sabiduria') {
+        // Las gestas de sabiduría abren el Math Quest antes de registrarse
+        estado.aceptandoGesta = true;
+        const { error } = await db.from('misiones')
+          .update({ estado:'pendiente_validacion', completado_por:estado.perfilActual.id })
+          .eq('id', mision.id).eq('estado','disponible');
+        estado.aceptandoGesta = false;
+        if (!error) {
+          await cargarMisiones();
+          iniciarMathQuest(mision);
+        }
+        return;
+      }
+
+      // Gesta normal
+      estado.aceptandoGesta = true;
+      const { error } = await db.from('misiones')
+        .update({ estado:'pendiente_validacion', completado_por:estado.perfilActual.id })
+        .eq('id', mision.id).eq('estado','disponible');
+      if (!error) {
+        await cargarMisiones();
+        estado.gestaPendiente = null;
+      }
+      estado.aceptandoGesta = false;
+    }
+
+    // ================================================================
+    // FEATURE 1 — MASCOTAS EVOLUTIVAS
+    // ================================================================
+    const mascotaActiva     = ref(null);   // objeto mascota_perfil del jugador
+    const mascotaEspecie    = ref(null);   // objeto mascotas_especies cruzado
+    const mascotaNuevoNombre = ref('');
+
+    async function cargarMascota() {
+      if (!estado.perfilActual) return;
+      const { data } = await db.from('mascotas_perfil')
+        .select('*, mascotas_especies(*)')
+        .eq('perfil_id', estado.perfilActual.id)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        mascotaActiva.value  = data;
+        mascotaEspecie.value = data.mascotas_especies;
+        // Calcular pérdida de hambre por días sin alimentar
+        const diasSinAlim = Math.floor(
+          (Date.now() - new Date(data.ultima_alim).getTime()) / 86400000
+        );
+        if (diasSinAlim > 0) {
+          const nuevaHambre = Math.max(0, data.hambre - diasSinAlim * 10);
+          if (nuevaHambre !== data.hambre) {
+            await db.from('mascotas_perfil')
+              .update({ hambre: nuevaHambre })
+              .eq('id', data.id);
+            mascotaActiva.value.hambre = nuevaHambre;
+          }
+        }
+      }
+    }
+
+    // Icono actual según nivel de evolución
+    const iconoMascotaActual = computed(() => {
+      if (!mascotaActiva.value || !mascotaEspecie.value) return '🥚';
+      const evols = mascotaEspecie.value.evoluciones;
+      // Encontrar la etapa más alta desbloqueada
+      let iconoActual = evols[0].icono;
+      for (const e of evols) {
+        if (mascotaActiva.value.hambre >= e.nivel) iconoActual = e.icono;
+      }
+      return iconoActual;
+    });
+    const nombreEtapaMascota = computed(() => {
+      if (!mascotaActiva.value || !mascotaEspecie.value) return '';
+      const evols = mascotaEspecie.value.evoluciones;
+      let nombre = evols[0].nombre;
+      for (const e of evols) {
+        if (mascotaActiva.value.hambre >= e.nivel) nombre = e.nombre;
+      }
+      return nombre;
+    });
+    const proximaEtapaMascota = computed(() => {
+      if (!mascotaActiva.value || !mascotaEspecie.value) return null;
+      const evols = mascotaEspecie.value.evoluciones;
+      return evols.find(e => e.nivel > mascotaActiva.value.hambre) || null;
+    });
+    const progresoEvolucion = computed(() => {
+      if (!mascotaActiva.value || !proximaEtapaMascota.value) return 100;
+      const evols = mascotaEspecie.value.evoluciones;
+      // Etapa actual (la más alta desbloqueada)
+      let etapaActualNivel = 0;
+      for (const e of evols) {
+        if (mascotaActiva.value.hambre >= e.nivel) etapaActualNivel = e.nivel;
+      }
+      const rango = proximaEtapaMascota.value.nivel - etapaActualNivel;
+      const avance = mascotaActiva.value.hambre - etapaActualNivel;
+      return Math.min(100, Math.round((avance / rango) * 100));
+    });
+
+    async function alimentarMascota() {
+      if (!mascotaActiva.value || estado.perfilActual.monedas < 5) return;
+      const nuevaHambre = Math.min(100, mascotaActiva.value.hambre + 15);
+      const [{ error: e1 }, { error: e2 }] = await Promise.all([
+        db.from('mascotas_perfil')
+          .update({ hambre: nuevaHambre, ultima_alim: new Date().toISOString() })
+          .eq('id', mascotaActiva.value.id),
+        db.from('perfiles')
+          .update({ monedas: estado.perfilActual.monedas - 5 })
+          .eq('id', estado.perfilActual.id),
+      ]);
+      if (!e1 && !e2) {
+        mascotaActiva.value.hambre = nuevaHambre;
+        estado.perfilActual.monedas -= 5;
+      }
+    }
+
+    async function guardarNombreMascota() {
+      const nombre = mascotaNuevoNombre.value.trim();
+      if (!nombre || !mascotaActiva.value) return;
+      const { error } = await db.from('mascotas_perfil')
+        .update({ nombre })
+        .eq('id', mascotaActiva.value.id);
+      if (!error) {
+        mascotaActiva.value.nombre = nombre;
+        mascotaNuevoNombre.value   = '';
+        estado.mascotaNombrando    = false;
+      }
+    }
+
+    // Dar mascota al jugador al comprar Huevo Misterioso
+    async function darMascotaAleatoria() {
+      const { data: especies } = await db.from('mascotas_especies').select('*');
+      if (!especies?.length) return;
+      const especie = especies[Math.floor(Math.random() * especies.length)];
+      const { error } = await db.from('mascotas_perfil').insert({
+        perfil_id:  estado.perfilActual.id,
+        especie_id: especie.id,
+        nombre:     'Mi Compañero',
+        hambre:     0,
+      });
+      if (!error) {
+        await cargarMascota();
+        // Mostrar modal de bienvenida con nombre de la especie obtenida
+        estado.mascotaBienvenida = { especie: especie.nombre, icono: especie.icono_huevo };
+      }
+    }
+
+    // ================================================================
+    // FEATURE 2 — MAPA DE PROGRESIÓN VISUAL
+    // ================================================================
+    const nodosMapaReino = [
+      { nivel:1,  x:50, y:85, nombre:'Aldea Inicial',      icono:'🏘️', premios:[] },
+      { nivel:2,  x:50, y:73, nombre:'Bosque Sombrío',     icono:'🌲', premios:[{icono:'🪙',desc:'+20 oro bonus'}] },
+      { nivel:3,  x:30, y:62, nombre:'Cueva del Eco',      icono:'🗿', premios:[{icono:'🎁',desc:'Cofre Madera'}] },
+      { nivel:4,  x:65, y:52, nombre:'Torre del Mago',     icono:'🗼', premios:[{icono:'⭐',desc:'+100 XP bonus'},{icono:'🎁',desc:'Cofre Plata'}] },
+      { nivel:5,  x:40, y:40, nombre:'Volcán Ardiente',    icono:'🌋', premios:[{icono:'🪙',desc:'+50 oro bonus'}] },
+      { nivel:7,  x:60, y:28, nombre:'Castillo del Rey',   icono:'🏰', premios:[{icono:'🎁',desc:'Cofre Oro'},{icono:'👑',desc:'Título Caballero'}] },
+      { nivel:10, x:50, y:14, nombre:'Trono Legendario',   icono:'👑', premios:[{icono:'💎',desc:'Gema Legendaria'}] },
+    ];
+
+    const nodoActual = computed(() => {
+      const nv = estado.perfilActual?.nivel ?? 1;
+      // El nodo actual es el más alto desbloqueado
+      let actual = nodosMapaReino[0];
+      for (const n of nodosMapaReino) { if (nv >= n.nivel) actual = n; }
+      return actual;
+    });
+    const nodoSiguiente = computed(() => {
+      const nv = estado.perfilActual?.nivel ?? 1;
+      return nodosMapaReino.find(n => n.nivel > nv) || null;
+    });
+    function nodoDesbloqueado(nodo) {
+      return (estado.perfilActual?.nivel ?? 1) >= nodo.nivel;
+    }
+    function nodoEsActual(nodo) {
+      return nodo === nodoActual.value;
+    }
+
+    // ================================================================
+    // FEATURE 3 — RACHAS + COFRES GACHA
+    // ================================================================
+    const cofresRecompensas = ref([]);
+
+    async function cargarCofresRecompensas() {
+      const { data } = await db.from('cofres_recompensas').select('*');
+      cofresRecompensas.value = data || [];
+    }
+
+    async function actualizarRacha() {
+      if (!estado.perfilActual) return;
+      const hoy  = new Date().toISOString().split('T')[0];
+      const ayer = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+      const ul   = estado.perfilActual.ultimo_login;
+
+      if (ul === hoy) return; // ya se actualizó hoy
+
+      let nuevaRacha = 1;
+      let nuevoMult  = 1.0;
+
+      if (ul === ayer) {
+        // Racha continúa
+        nuevaRacha = (estado.perfilActual.racha_actual || 0) + 1;
+        nuevoMult  = Math.min(1.5, (estado.perfilActual.multiplicador_xp || 1.0) + 0.05);
+      }
+      // Si ul no es ayer ni hoy: racha rota (valores por defecto ya están)
+
+      const { error } = await db.from('perfiles').update({
+        racha_actual:     nuevaRacha,
+        ultimo_login:     hoy,
+        multiplicador_xp: nuevoMult,
+      }).eq('id', estado.perfilActual.id);
+
+      if (!error) {
+        estado.perfilActual.racha_actual     = nuevaRacha;
+        estado.perfilActual.ultimo_login     = hoy;
+        estado.perfilActual.multiplicador_xp = nuevoMult;
+        // Toast de racha si es > 1 día
+        if (nuevaRacha > 1) {
+          estado.recompensaGanada = {
+            xp: 0, monedas: 0,
+            pendiente: false,
+            mensajeEspecial: `🔥 ¡${nuevaRacha} días seguidos! ×${nuevoMult.toFixed(2)} XP`,
+          };
+          setTimeout(() => { estado.recompensaGanada = null; }, 4000);
+        }
+      }
+    }
+
+    // Algoritmo de lootbox: weighted random sobre tabla cofres_recompensas
+    function _sortearRecompensa(tipo) {
+      const pool = cofresRecompensas.value.filter(r => r.cofre_tipo === tipo);
+      if (!pool.length) return { icono:'🪙', descripcion:'10 monedas', tipo_premio:'monedas', valor:10 };
+      const pesoTotal = pool.reduce((s, r) => s + r.peso, 0);
+      let rand = Math.random() * pesoTotal;
+      for (const r of pool) { rand -= r.peso; if (rand <= 0) return r; }
+      return pool[pool.length - 1];
+    }
+
+    async function comprarYAbrirCofre(cofre) {
+      if (estado.perfilActual.monedas < cofre.precio || estado.cofreAbriendo) return;
+      estado.cofreAbriendo    = true;
+      estado.cofreTipoActivo  = cofre.tipo;
+      estado.cofreRecompensa  = null;
+
+      // Descontar monedas
+      const nuevasMonedas = estado.perfilActual.monedas - cofre.precio;
+      await db.from('perfiles')
+        .update({ monedas: nuevasMonedas })
+        .eq('id', estado.perfilActual.id);
+      estado.perfilActual.monedas = nuevasMonedas;
+
+      // Esperar la animación de apertura (1.5s)
+      await new Promise(r => setTimeout(r, 1500));
+
+      // Sortear recompensa
+      const premio = _sortearRecompensa(cofre.tipo);
+      estado.cofreRecompensa = premio;
+
+      // Aplicar recompensa al jugador
+      if (premio.tipo_premio === 'monedas' && premio.valor) {
+        const conPremio = estado.perfilActual.monedas + premio.valor;
+        await db.from('perfiles').update({ monedas: conPremio }).eq('id', estado.perfilActual.id);
+        estado.perfilActual.monedas = conPremio;
+      } else if (premio.tipo_premio === 'xp' && premio.valor) {
+        const nuevoXP    = (estado.perfilActual.xp || 0) + premio.valor;
+        const nuevoNivel = calcularNivel(nuevoXP);
+        await db.from('perfiles').update({ xp: nuevoXP, nivel: nuevoNivel }).eq('id', estado.perfilActual.id);
+        estado.perfilActual.xp    = nuevoXP;
+        estado.perfilActual.nivel = nuevoNivel;
+      } else if (premio.tipo_premio === 'comida' && mascotaActiva.value && premio.valor) {
+        const nuevaHambre = Math.min(100, mascotaActiva.value.hambre + (premio.valor * 5));
+        await db.from('mascotas_perfil').update({ hambre: nuevaHambre }).eq('id', mascotaActiva.value.id);
+        mascotaActiva.value.hambre = nuevaHambre;
+      }
+
+      // Registrar en compras para historial
+      await db.from('compras').insert({
+        perfil_id: estado.perfilActual.id,
+        item_id: null,
+        item_nombre: `Cofre de ${cofre.tipo} — ${premio.descripcion}`,
+        precio_pagado: cofre.precio,
+      });
+    }
+
+    function cerrarCofre() {
+      estado.cofreAbriendo   = false;
+      estado.cofreRecompensa = null;
+      estado.cofreTipoActivo = null;
+    }
+
+    // Override de comprarItem para detectar Huevo Misterioso
+    const _comprarItemOriginal = comprarItem;
+
+    // ---- Watcher sala ----
+    const { watch } = Vue;
+    watch(() => estado.vistaJugador, async (vista) => {
+      if (vista === 'sala') { await nextTick(); iniciarSala3D(); cargarHistorialChat(); }
+      else {
+        if (hallAnimId) { cancelAnimationFrame(hallAnimId); hallAnimId = null; }
+        const canvas = document.getElementById('hall-canvas');
+        if (canvas && canvasObserver) canvasObserver.unobserve(canvas);
+        if (hallRenderer) { hallRenderer.dispose(); hallRenderer = null; hallScene = null; }
+      }
+    });
+
+    // ---- Ciclo de vida ----
+    onMounted(async () => {
+      // IntersectionObserver: detiene el RAF cuando el canvas sale del viewport
+      // y lo reanuda al volver — evita consumo de CPU/batería innecesario en móvil
+      canvasObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const id = entry.target.id;
+          if (!id) return;
+          const eraVisible = canvasVisibility[id];
+          canvasVisibility[id] = entry.isIntersecting;
+
+          // Si el canvas vuelve a ser visible y el RAF fue cancelado, lo reanuda
+          if (entry.isIntersecting && !eraVisible) {
+            if (id === 'avatar-mini' && miniScene && !miniAnimId) {
+              (function loop() {
+                if (!canvasVisibility['avatar-mini']) { miniAnimId = null; return; }
+                miniAnimId = requestAnimationFrame(loop);
+                if (miniGrp) miniGrp.rotation.y += 0.015;
+                miniRenderer && miniRenderer.render(miniScene, miniCamera);
+              })();
+            }
+            if (id === 'avatar-canvas' && bigScene && !animId) {
+              (function loopBig() {
+                if (!canvasVisibility['avatar-canvas']) { animId = null; return; }
+                animId = requestAnimationFrame(loopBig);
+                if (avatarGrp) avatarGrp.rotation.y += 0.008;
+                bigRenderer && bigRenderer.render(bigScene, bigCamera);
+              })();
+            }
+            if (id === 'hall-canvas' && hallScene && !hallAnimId) {
+              (function loopHall() {
+                if (!canvasVisibility['hall-canvas']) { hallAnimId = null; return; }
+                hallAnimId = requestAnimationFrame(loopHall);
+                for (const grp of modelosHall.values()) grp.rotation.y += 0.004;
+                hallRenderer && hallRenderer.render(hallScene, hallCamera);
+              })();
+            }
+          }
+        });
+      }, { threshold: 0.05 });
+
+      await Promise.all([cargarPerfiles(), cargarMisiones()]);
+
+      // Auto-Login: si la sesión estaba guardada, re-hidratamos el perfil
+      // con los datos FRESCOS de Supabase (nivel/monedas pueden haber cambiado)
+      if (loginState.autoLoginEnProceso && loginState.sesionRecordada?.id) {
+        const perfilFresco = perfiles.value.find(p => p.id === loginState.sesionRecordada.id);
+        if (perfilFresco) {
+          estado.perfilActual = { ...perfilFresco };
+          if (perfilFresco.avatar_config && Object.keys(perfilFresco.avatar_config).length > 0) {
+            Object.assign(avatarConfig, perfilFresco.avatar_config);
+          }
+          // Actualizar localStorage con datos frescos
+          try { localStorage.setItem('lifeRpgSesion', JSON.stringify(estado.perfilActual)); } catch(e) {}
+          iniciarEscuchaRealtime();
+          await nextTick();
+          iniciarAvatarMini();
+          cargarTienda(); cargarHistorialMisiones(); cargarInventario();
+          cargarLogros().then(verificarLogros);
+        } else {
+          // El perfil fue eliminado; limpiar sesión corrupta
+          try { localStorage.removeItem('lifeRpgSesion'); } catch(e) {}
+          loginState.sesionRecordada = null;
+        }
+        loginState.autoLoginEnProceso = false;
+      }
+
+      estado.cargando = false;
+    });
+    
+    onUnmounted(() => {
+      if (canvasObserver) canvasObserver.disconnect();
+      if (canalRealtime) db.removeChannel(canalRealtime);
+      if (animId)      cancelAnimationFrame(animId);
+      if (miniAnimId)  cancelAnimationFrame(miniAnimId);
+      if (hallAnimId)  cancelAnimationFrame(hallAnimId);
+      if (bigRenderer)  bigRenderer.dispose();
+      if (miniRenderer) miniRenderer.dispose();
+      if (hallRenderer) hallRenderer.dispose();
+      _desmontarListenersAvatar();
+    });
+
+    return {
+      estado, animaciones, loginState, perfiles, misiones, jugadoresOnline,
+      adminTabActivo, adminTabs, nuevaMision, nuevoUsuario, usuarioFeedback,
+      editandoUsuario, pinEliminar, pinEliminarError, nextTick,
+      avatarConfig, avatarPartes, estilosAvatar, avatarParteActiva, paletasPorParte,
+      tiendaItems, tiendaCategoria, misioesHistorial, logros, logrosUsuario,
+      chatMensajes, chatTexto,
+      misionesDisponibles, misionesPendientes, misionesTomadasJugador, xpParaSiguienteNivel, porcentajeXP,
+      seleccionarParaLogin, volverSeleccion, ingresarDigito, borrarDigito, buscarPerfilPorNombre,
+      cerrarSesion, crearMision, aprobarMision, rechazarMision, eliminarMisionAdmin,
+      tomarMision, confirmarTomarGesta, completarMision, crearUsuario,
+      guardarEdicionUsuario, iniciarEliminarUsuario, confirmarEliminarUsuario,
+      abrirAvatarEditor, cerrarAvatarEditor, actualizarAvatar, guardarAvatar,
+      seleccionarColorAvatar, seleccionarEstiloAvatar,
+      leerMision, leerMensajeChat, comprarItem,
+      enviarMensajeChat,
+      // Inventario, foto, stats, math quest
+      inventario, subirFotoPerfil, eliminarFotoPerfil, statsCalculados,
+      mathQuest, responderMathQuest, siguientePreguntaMath,
+      // Feature 1: Mascotas
+      mascotaActiva, mascotaNuevoNombre,
+      iconoMascotaActual, nombreEtapaMascota, proximaEtapaMascota, progresoEvolucion,
+      alimentarMascota, guardarNombreMascota,
+      // Feature 2: Mapa
+      nodosMapaReino, nodoActual, nodoSiguiente, nodoDesbloqueado, nodoEsActual,
+      // Feature 3: Rachas + Cofres
+      comprarYAbrirCofre, cerrarCofre,
+    };
+  }
+});
+
+app.use(pinia);
+app.mount('#app');
+</script>
+
+<!-- Service Worker PWA — requerido por Chrome para activar "Instalar aplicación" -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      // Estrategia: Network First con fallback offline mínimo
+      // El SW debe estar en el mismo origen — usamos un archivo inline via fetch trick
+      const swCode = `
+        const CACHE = 'life-rpg-v1';
+        const OFFLINE_URLS = ['/'];
+
+        self.addEventListener('install', (e) => {
+          e.waitUntil(
+            caches.open(CACHE).then(c => c.addAll(OFFLINE_URLS)).then(() => self.skipWaiting())
+          );
+        });
+
+        self.addEventListener('activate', (e) => {
+          e.waitUntil(
+            caches.keys().then(keys =>
+              Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+            ).then(() => self.clients.claim())
+          );
+        });
+
+        self.addEventListener('fetch', (e) => {
+          // Solo interceptar GET del mismo origen
+          if (e.request.method !== 'GET') return;
+          if (!e.request.url.startsWith(self.location.origin)) return;
+
+          e.respondWith(
+            fetch(e.request)
+              .then(res => {
+                // Cachear respuestas exitosas de la página principal
+                if (res.ok && e.request.url === self.location.origin + '/') {
+                  const clone = res.clone();
+                  caches.open(CACHE).then(c => c.put(e.request, clone));
+                }
+                return res;
+              })
+              .catch(() => caches.match(e.request).then(r => r || caches.match('/')))
+          );
+        });
+      `;
+
+      // Registrar via Blob — funciona en Vercel porque el origen es el mismo
+      const blob = new Blob([swCode], { type: 'application/javascript' });
+      const swUrl = URL.createObjectURL(blob);
+
+      const reg = await navigator.serviceWorker.register(swUrl, { scope: '/' });
+      console.log('✅ PWA Service Worker activo:', reg.scope);
+    } catch (err) {
+      // SW falla silenciosamente — la app funciona igual sin él
+      console.log('SW no disponible:', err.message);
+    }
+  });
+}
+</script>
+
+</body>
+</html>
