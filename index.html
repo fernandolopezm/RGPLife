@@ -856,67 +856,73 @@
           <h2 class="font-title text-2xl text-rpgYellow uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">Mapa del Reino</h2>
         </div>
 
-        <!-- SVG del mapa de progresión -->
+        <!-- SVG del mapa de progresión — viewBox más alto para separar nodos -->
         <div class="bg-gradient-to-b from-[#0a0520] to-[#1a0a3e] border-4 border-rpgPurple rounded-3xl overflow-hidden shadow-brutalLg relative">
-          <svg viewBox="0 0 100 95" xmlns="http://www.w3.org/2000/svg" class="w-full" style="min-height:340px">
+          <svg viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg" class="w-full">
             <!-- Fondo estrellas -->
-            <circle cx="10" cy="5"  r="0.4" fill="white" opacity="0.6"/>
-            <circle cx="90" cy="8"  r="0.3" fill="white" opacity="0.5"/>
-            <circle cx="30" cy="3"  r="0.3" fill="white" opacity="0.7"/>
-            <circle cx="75" cy="15" r="0.4" fill="white" opacity="0.4"/>
-            <circle cx="5"  cy="40" r="0.3" fill="white" opacity="0.6"/>
-            <circle cx="95" cy="55" r="0.4" fill="white" opacity="0.5"/>
+            <circle cx="8"   cy="8"   r="0.5" fill="white" opacity="0.7"/>
+            <circle cx="112" cy="12"  r="0.4" fill="white" opacity="0.5"/>
+            <circle cx="25"  cy="5"   r="0.4" fill="white" opacity="0.6"/>
+            <circle cx="95"  cy="25"  r="0.3" fill="white" opacity="0.4"/>
+            <circle cx="5"   cy="70"  r="0.4" fill="white" opacity="0.5"/>
+            <circle cx="115" cy="90"  r="0.3" fill="white" opacity="0.6"/>
+            <circle cx="20"  cy="120" r="0.4" fill="white" opacity="0.4"/>
+            <circle cx="100" cy="140" r="0.3" fill="white" opacity="0.5"/>
 
-            <!-- Líneas de camino entre nodos -->
+            <!-- Líneas de camino -->
             <polyline v-for="(nodo, i) in nodosMapaReino.slice(0,-1)" :key="'linea'+i"
                       :points="`${nodo.x},${nodo.y} ${nodosMapaReino[i+1].x},${nodosMapaReino[i+1].y}`"
                       :stroke="nodoDesbloqueado(nodosMapaReino[i+1]) ? '#7B2FBE' : '#2D1B4E'"
-                      stroke-width="1.5" stroke-dasharray="2,2" fill="none" />
+                      stroke-width="1.2" stroke-dasharray="3,3" fill="none" />
 
             <!-- Nodos -->
             <g v-for="nodo in nodosMapaReino" :key="nodo.nivel">
+              <!-- Sombra del círculo -->
+              <circle :cx="nodo.x+0.8" :cy="nodo.y+0.8" r="7" fill="black" opacity="0.3"/>
               <!-- Círculo base -->
-              <circle :cx="nodo.x" :cy="nodo.y" r="6.5"
+              <circle :cx="nodo.x" :cy="nodo.y" r="7"
                       :fill="nodoDesbloqueado(nodo) ? '#7B2FBE' : '#1f2947'"
                       :stroke="nodoDesbloqueado(nodo) ? '#FFD700' : '#2D1B4E'"
                       stroke-width="1.5"/>
-              <!-- Glow para nodo actual -->
-              <circle v-if="nodoEsActual(nodo)" :cx="nodo.x" :cy="nodo.y" r="8"
-                      fill="none" stroke="#FFD700" stroke-width="0.8" opacity="0.6">
-                <animate attributeName="r" values="7;9;7" dur="2s" repeatCount="indefinite"/>
-                <animate attributeName="opacity" values="0.6;0.1;0.6" dur="2s" repeatCount="indefinite"/>
+              <!-- Glow animado para nodo actual -->
+              <circle v-if="nodoEsActual(nodo)" :cx="nodo.x" :cy="nodo.y" r="9"
+                      fill="none" stroke="#FFD700" stroke-width="1" opacity="0.7">
+                <animate attributeName="r" values="8;11;8" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0.7;0.1;0.7" dur="2s" repeatCount="indefinite"/>
               </circle>
               <!-- Icono del nodo -->
-              <text :x="nodo.x" :y="nodo.y + 2.5" text-anchor="middle" font-size="6"
-                    :opacity="nodoDesbloqueado(nodo) ? '1' : '0.3'">{{ nodo.icono }}</text>
-              <!-- Nivel requerido -->
-              <text :x="nodo.x" :y="nodo.y + 11" text-anchor="middle" font-size="3"
-                    :fill="nodoDesbloqueado(nodo) ? '#FFD700' : '#6b7280'" font-weight="bold">
+              <text :x="nodo.x" :y="nodo.y + 3" text-anchor="middle" font-size="7"
+                    :opacity="nodoDesbloqueado(nodo) ? '1' : '0.25'">{{ nodo.icono }}</text>
+              <!-- Nivel requerido — debajo del nodo -->
+              <text :x="nodo.x" :y="nodo.y + 13" text-anchor="middle" font-size="3.5"
+                    :fill="nodoDesbloqueado(nodo) ? '#FFD700' : '#4b5563'" font-weight="bold">
                 Nv.{{ nodo.nivel }}
               </text>
-              <!-- Nombre del lugar -->
-              <text :x="nodo.x" :y="nodo.y - 9" text-anchor="middle" font-size="2.8"
-                    :fill="nodoDesbloqueado(nodo) ? '#ffffff' : '#4b5563'"
+              <!-- Nombre del lugar — ALTERNANDO izquierda/derecha para evitar superposición -->
+              <text :x="nodo.x + (nodo.nivel % 2 === 0 ? 14 : -14)" :y="nodo.y + 1"
+                    :text-anchor="nodo.nivel % 2 === 0 ? 'start' : 'end'"
+                    font-size="3.5"
+                    :fill="nodoDesbloqueado(nodo) ? '#e2e8f0' : '#374151'"
                     :font-weight="nodoEsActual(nodo) ? 'bold' : 'normal'">
                 {{ nodo.nombre }}
               </text>
             </g>
 
-            <!-- Avatar del jugador en su nodo actual -->
-            <text :x="nodoActual.x" :y="nodoActual.y - 14" text-anchor="middle" font-size="5">
+            <!-- Avatar del jugador encima del nodo actual -->
+            <text :x="nodoActual.x" :y="nodoActual.y - 12" text-anchor="middle" font-size="8">
               {{ avatarConfig.genero === 'F' ? '🧝‍♀️' : '🧑‍⚔️' }}
             </text>
           </svg>
 
-          <!-- Leyenda de ubicación actual -->
-          <div class="absolute bottom-3 left-3 right-3 bg-black/70 rounded-2xl px-4 py-2 flex items-center justify-between border border-rpgPurple/40">
+          <!-- Leyenda inferior -->
+          <div class="bg-black/70 border-t-2 border-rpgPurple/40 px-4 py-3 flex items-center justify-between">
             <div>
-              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Ubicación actual</p>
+              <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Ubicación</p>
               <p class="font-title text-white text-sm">{{ nodoActual.nombre }}</p>
             </div>
             <div class="text-right">
-              <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Próximo destino</p>
-              <p class="font-title text-rpgYellow text-sm">{{ nodoSiguiente?.nombre || '¡Eres legendario!' }}</p>
+              <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Próximo</p>
+              <p class="font-title text-rpgYellow text-sm">{{ nodoSiguiente?.nombre || '¡Legendario!' }}</p>
             </div>
           </div>
         </div>
@@ -934,21 +940,254 @@
         </div>
       </template>
 
+    <!-- ===== VISTA: MASCOTA (sección independiente) ===== -->
+      <template v-if="estado.vistaJugador === 'mascota'">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="text-4xl drop-shadow-md">🐾</span>
+          <h2 class="font-title text-2xl text-rpgPurple uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">Compañero</h2>
+        </div>
+
+        <!-- Sin mascota -->
+        <div v-if="!mascotaActiva" class="bg-rpgCard border-4 border-dashed border-rpgPurple/50 rounded-3xl p-10 text-center shadow-brutal">
+          <div class="text-7xl mb-4 animate-float">🥚</div>
+          <p class="font-title text-rpgPurple text-xl mb-2">Sin Compañero</p>
+          <p class="text-gray-400 font-bold mb-4">Compra un Huevo Misterioso en el Mercado.</p>
+          <button @click="estado.vistaJugador = 'tienda'"
+                  class="btn-3d bg-rpgOrange border-4 border-black rounded-2xl px-6 py-3 font-title text-black shadow-brutal uppercase">
+            Ir al Mercado ⛺
+          </button>
+        </div>
+
+        <!-- Con mascota -->
+        <div v-else class="space-y-4">
+          <!-- Canvas 2D de la mascota -->
+          <div class="bg-gradient-to-b from-[#1a0a3e] to-[#0a0520] border-4 border-rpgPurple rounded-3xl overflow-hidden shadow-brutalLg relative"
+               style="min-height:260px">
+            <!-- Fondo decorativo -->
+            <div class="absolute inset-0 overflow-hidden pointer-events-none">
+              <div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#0a0520] to-transparent"></div>
+              <!-- Partículas de fondo según etapa -->
+              <div v-if="mascotaActiva.hambre >= 100" class="absolute inset-0">
+                <div v-for="i in 8" :key="i"
+                     class="absolute text-2xl animate-float"
+                     :style="`left:${10+i*10}%;top:${20+((i*37)%50)}%;animation-delay:${i*0.3}s;animation-duration:${2+i*0.4}s;opacity:0.6`">
+                  ✨
+                </div>
+              </div>
+              <div v-else-if="mascotaActiva.hambre >= 60" class="absolute inset-0">
+                <div v-for="i in 5" :key="i"
+                     class="absolute text-xl animate-float"
+                     :style="`left:${15+i*15}%;top:${30+((i*41)%40)}%;animation-delay:${i*0.5}s;animation-duration:${3+i*0.3}s;opacity:0.4`">
+                  🌟
+                </div>
+              </div>
+            </div>
+
+            <!-- Mascota central — emoji grande animado -->
+            <div class="relative z-10 flex flex-col items-center justify-center pt-8 pb-4">
+              <!-- Sombra debajo -->
+              <div class="w-24 h-4 bg-black/40 rounded-full blur-md mb-[-8px] mx-auto"></div>
+
+              <!-- Emoji principal con animación según estado -->
+              <div class="relative">
+                <!-- Aura legendaria -->
+                <div v-if="mascotaActiva.hambre >= 100"
+                     class="absolute inset-[-20px] rounded-full animate-pulse"
+                     style="background:radial-gradient(circle,rgba(255,215,0,0.3),transparent 70%)"></div>
+                <!-- Aura adulto -->
+                <div v-else-if="mascotaActiva.hambre >= 60"
+                     class="absolute inset-[-12px] rounded-full animate-pulse"
+                     style="background:radial-gradient(circle,rgba(123,47,190,0.3),transparent 70%)"></div>
+
+                <!-- Efecto flash de evolución -->
+                <div v-if="estado.mascotaEvolucionando"
+                     class="absolute inset-[-40px] rounded-full animate-ping"
+                     style="background:radial-gradient(circle,rgba(255,215,0,0.6),transparent 60%);z-index:20"></div>
+
+                <!-- Emoji principal -->
+                <div class="animate-float relative z-10 select-none transition-all duration-500"
+                     :class="estado.mascotaEvolucionando ? 'scale-150' : 'scale-100'"
+                     :style="`font-size:${mascotaActiva.hambre >= 60 ? '96' : mascotaActiva.hambre >= 25 ? '80' : '64'}px;animation-duration:${mascotaActiva.hambre >= 60 ? '2' : '3'}s;filter:drop-shadow(0 8px 16px rgba(0,0,0,0.6))`">
+                  {{ iconoMascotaActual }}
+                </div>
+              </div>
+
+              <!-- Nombre y etapa -->
+              <p class="font-title text-white text-2xl mt-4" style="text-shadow:2px 2px 0 #000">
+                {{ mascotaActiva.nombre }}
+              </p>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-rpgPurple text-xs font-black uppercase tracking-widest">{{ nombreEtapaMascota }}</span>
+                <!-- Generación si es > 1 -->
+                <span v-if="(mascotaActiva.generacion || 0) > 0"
+                      class="bg-rpgYellow text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black shadow-brutal">
+                  Gen {{ (mascotaActiva.generacion || 0) + 1 }}
+                </span>
+              </div>
+
+              <!-- Mensaje de estado emocional -->
+              <p class="text-sm font-bold mt-2 px-4 text-center"
+                 :class="mascotaActiva.hambre >= 80 ? 'text-rpgGreen' : mascotaActiva.hambre >= 40 ? 'text-rpgYellow' : 'text-rpgRed'">
+                {{ mascotaActiva.hambre >= 80 ? '😊 ¡Estoy feliz y lleno de energía!' : mascotaActiva.hambre >= 40 ? '😐 Estoy bien, pero podría comer...' : '😢 ¡Tengo hambre! ¡Por favor aliméntame!' }}
+              </p>
+            </div>
+
+            <!-- Barra de hambre integrada en el canvas -->
+            <div class="relative z-10 px-5 pb-4">
+              <div class="flex justify-between items-center mb-1">
+                <span class="text-xs font-black text-rpgOrange uppercase tracking-wider">🍖 Nutrición</span>
+                <span class="font-title text-white text-sm">{{ mascotaActiva.hambre }}/100</span>
+              </div>
+              <div class="h-4 bg-black/60 rounded-full border-2 border-gray-800 overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-700 relative overflow-hidden"
+                     :class="mascotaActiva.hambre > 60 ? 'bg-rpgGreen' : mascotaActiva.hambre > 30 ? 'bg-rpgYellow' : 'bg-rpgRed'"
+                     :style="{ width: mascotaActiva.hambre + '%' }">
+                  <div class="absolute inset-0 bar-stripes animate-stripes opacity-30"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Progreso de evolución -->
+          <div class="bg-rpgCard border-2 border-gray-700 rounded-2xl p-4 shadow-brutal">
+            <div v-if="proximaEtapaMascota">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-xs text-gray-400 font-bold uppercase tracking-wider">Próxima forma</span>
+                <span class="font-title text-rpgBlue text-sm">{{ proximaEtapaMascota.nombre }}</span>
+              </div>
+              <div class="h-3 bg-black rounded-full border-2 border-gray-800 overflow-hidden mb-1">
+                <div class="h-full bg-rpgBlue rounded-full transition-all"
+                     :style="{ width: progresoEvolucion + '%' }"></div>
+              </div>
+              <p class="text-[10px] text-gray-600 font-bold text-right">
+                Necesita {{ proximaEtapaMascota.nivel - mascotaActiva.hambre }} de nutrición más
+              </p>
+            </div>
+            <div v-else class="text-center">
+              <p class="text-rpgYellow font-title text-sm">🏆 ¡Forma Legendaria alcanzada!</p>
+              <p class="text-gray-400 text-xs font-bold mt-1">
+                Sigue alimentándola para mantenerla feliz.<br/>
+                Al llegar a nueva generación mantendrá su poder legendario.
+              </p>
+            </div>
+          </div>
+
+          <!-- Racha de acceso aquí también -->
+          <div class="bg-rpgCard border-2 border-gray-700 rounded-2xl p-4 shadow-brutal">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">🔥</span>
+                <div>
+                  <p class="font-title text-white text-sm">Racha de Aventura</p>
+                  <p class="text-gray-500 text-xs font-bold">Días consecutivos activo</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="font-title text-rpgOrange text-2xl">{{ estado.perfilActual.racha_actual || 0 }}</p>
+                <p class="text-gray-600 text-[10px] font-bold uppercase">días</p>
+              </div>
+            </div>
+            <div class="flex gap-1 justify-center">
+              <div v-for="d in 7" :key="d"
+                   class="w-9 h-9 rounded-xl border-2 flex items-center justify-center text-sm font-black"
+                   :class="d <= ((estado.perfilActual.racha_actual || 0) % 7) || (estado.perfilActual.racha_actual || 0) >= 7
+                     ? 'bg-rpgOrange border-black text-black' : 'bg-black/40 border-gray-700 text-gray-600'">
+                {{ d <= ((estado.perfilActual.racha_actual || 0) % 7) || (estado.perfilActual.racha_actual || 0) >= 7 ? '🔥' : d }}
+              </div>
+            </div>
+            <div class="mt-3 bg-black/40 rounded-xl px-3 py-2 flex items-center justify-between border border-gray-700">
+              <span class="text-xs text-gray-400 font-bold">⭐ Multiplicador XP</span>
+              <span class="font-title text-rpgGreen text-sm">×{{ (estado.perfilActual.multiplicador_xp || 1).toFixed(2) }}</span>
+            </div>
+          </div>
+
+          <!-- Botones de acción -->
+          <div class="flex gap-3">
+            <button @click="alimentarMascota"
+                    :disabled="estado.perfilActual.monedas < 5"
+                    class="btn-3d flex-1 bg-rpgOrange border-4 border-black rounded-2xl py-4 font-title text-black shadow-brutal uppercase">
+              🍖 Alimentar<br><span class="text-xs">5 🪙</span>
+            </button>
+            <button @click="alimentarMascotaGrande"
+                    :disabled="estado.perfilActual.monedas < 10"
+                    class="btn-3d flex-1 bg-rpgYellow border-4 border-black rounded-2xl py-4 font-title text-black shadow-brutal uppercase">
+              🍗 Festín<br><span class="text-xs">10 🪙 +30</span>
+            </button>
+            <button @click="estado.mascotaNombrando = true"
+                    class="btn-3d w-14 bg-rpgPurple border-4 border-black rounded-2xl flex items-center justify-center text-white shadow-brutal text-2xl">
+              ✏️
+            </button>
+          </div>
+        </div>
+      </template>
+
     </div><!-- /contenido principal -->
 
-    <!-- NAV INFERIOR -->
-    <div v-if="estado.perfilActual"
-         class="fixed bottom-4 left-4 right-4 z-40 max-w-md mx-auto bg-rpgCard border-4 border-black rounded-3xl p-2 shadow-brutalXl flex justify-around items-center">
-      <button v-for="tab in [{id:'misiones',icon:'📜',label:'Misiones'},{id:'tienda',icon:'⛺',label:'Mercado'},{id:'sala',icon:'🏰',label:'Taberna'},{id:'mapa',icon:'🗺️',label:'Mapa'},{id:'perfil',icon:'🛡️',label:'Héroe'}]"
-              :key="tab.id" @click="estado.vistaJugador = tab.id"
-              class="relative flex flex-col items-center gap-1 px-4 py-2 rounded-2xl transition-all w-1/4"
-              :class="estado.vistaJugador === tab.id ? 'bg-black/30' : ''">
-        <div v-if="estado.vistaJugador === tab.id" class="absolute -top-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-rpgYellow rounded-full" style="box-shadow:0 0 10px #FFD700"></div>
-        <span class="text-2xl transition-transform" :class="estado.vistaJugador === tab.id ? 'scale-125' : 'opacity-70 grayscale'" :style="estado.vistaJugador === tab.id ? 'filter:drop-shadow(0 0 8px rgba(255,215,0,0.8))' : ''">{{ tab.icon }}</span>
-        <span class="text-[10px] font-bold uppercase tracking-widest mt-1 transition-colors"
-              :class="estado.vistaJugador === tab.id ? 'text-rpgYellow' : 'text-gray-500'">{{ tab.label }}</span>
+    <!-- ===== HUB PRINCIPAL(reemplaza nav inferior) ===== -->
+    <!-- Vista: HUB -->
+    <template v-if="estado.vistaJugador === 'hub'">
+      <div class="min-h-[70vh] flex flex-col items-center justify-center gap-4 px-2 pb-6">
+        <!-- Saludo -->
+        <div class="text-center mb-2">
+          <p class="text-gray-400 text-sm font-bold uppercase tracking-widest">¿A dónde vas,</p>
+          <p class="font-title text-rpgYellow text-2xl" style="text-shadow:2px 2px 0 #000">{{ estado.perfilActual.nombre }}?</p>
+        </div>
+
+        <!-- Grid principal 2x3 -->
+        <div class="grid grid-cols-2 gap-4 w-full max-w-sm">
+          <button v-for="tab in hubTabs" :key="tab.id"
+                  @click="estado.vistaJugador = tab.id"
+                  class="btn-3d relative flex flex-col items-center justify-center gap-2 p-5 rounded-3xl border-4 shadow-brutalLg overflow-hidden group"
+                  :class="tab.clases">
+            <!-- Glow de fondo -->
+            <div class="absolute inset-0 opacity-0 group-active:opacity-100 transition-opacity"
+                 :class="tab.glow"></div>
+            <!-- Badge de notificación -->
+            <div v-if="tab.id === 'misiones' && misionesDisponibles.length > 0"
+                 class="absolute top-2 right-2 bg-rpgRed border-2 border-black text-white font-black text-xs w-6 h-6 rounded-full flex items-center justify-center shadow-brutal">
+              {{ misionesDisponibles.length }}
+            </div>
+            <div v-if="tab.id === 'mascota' && mascotaActiva && mascotaActiva.hambre < 20"
+                 class="absolute top-2 right-2 bg-rpgOrange border-2 border-black text-black font-black text-xs w-6 h-6 rounded-full flex items-center justify-center shadow-brutal animate-bounce">
+              🍖
+            </div>
+            <span class="text-5xl relative z-10" style="filter:drop-shadow(0 4px 8px rgba(0,0,0,0.5))">{{ tab.icon }}</span>
+            <span class="font-title text-sm uppercase tracking-wider relative z-10" :class="tab.textColor">{{ tab.label }}</span>
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <!-- NAV INFERIOR COMPACTO (solo cuando NO estás en el hub) -->
+    <div v-if="estado.perfilActual && estado.vistaJugador !== 'hub'"
+         class="fixed bottom-0 left-0 right-0 z-40 bg-rpgDarker border-t-4 border-black flex justify-around items-center px-1 py-1"
+         style="padding-bottom: env(safe-area-inset-bottom)">
+      <!-- Botón volver al hub -->
+      <button @click="estado.vistaJugador = 'hub'"
+              class="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl"
+              :class="estado.vistaJugador === 'hub' ? 'bg-black/40' : ''">
+        <span class="text-xl">🏠</span>
+        <span class="text-[9px] font-bold uppercase text-gray-500">Inicio</span>
+      </button>
+      <!-- Tabs activos -->
+      <button v-for="tab in hubTabs" :key="tab.id"
+              @click="estado.vistaJugador = tab.id"
+              class="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl relative transition-all"
+              :class="estado.vistaJugador === tab.id ? 'bg-black/40' : ''">
+        <div v-if="estado.vistaJugador === tab.id"
+             class="absolute -top-0.5 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-rpgYellow rounded-full"></div>
+        <span class="text-xl transition-transform"
+              :class="estado.vistaJugador === tab.id ? 'scale-125' : 'opacity-60 grayscale'"
+              :style="estado.vistaJugador === tab.id ? 'filter:drop-shadow(0 0 6px rgba(255,215,0,0.8))' : ''">
+          {{ tab.icon }}
+        </span>
+        <span class="text-[9px] font-bold uppercase transition-colors"
+              :class="estado.vistaJugador === tab.id ? 'text-rpgYellow' : 'text-gray-600'">
+          {{ tab.label }}
+        </span>
       </button>
     </div>
+
   </div><!-- /vista principal -->
 
   <!-- ==========================================
@@ -1579,7 +1818,7 @@ const useGameStore = defineStore('game', () => {
     cargando: true, perfilActual: null,
     guardando: false, guardandoUsuario: false, guardandoAvatar: false,
     aprobando: null, recompensaGanada: null, avatarModal: false,
-    vistaJugador: 'misiones',
+    vistaJugador: 'hub',
     panelAdmin: false,
     comprando: null, eliminandoUsuario: null,
     gestaPendiente: null,
@@ -1598,7 +1837,8 @@ const useGameStore = defineStore('game', () => {
     cofreRecompensa: null,
     cofreTipoActivo: null,
     // ---- Mascota bienvenida ----
-    mascotaBienvenida: null,   // { especie, icono } — modal al obtener huevo
+    mascotaBienvenida: null,
+    mascotaEvolucionando: false, // dispara animación de evolución
   });
   const animaciones = reactive({ xpFlash: false, coinSpin: false });
   const loginState = reactive({
@@ -1680,8 +1920,18 @@ const app = createApp({
     const misiones       = ref([]);
     const adminTabActivo = ref('misiones');
     const adminTabs = [
-      { id: 'misiones', icon: '📜', label: 'Gestas'       },
-      { id: 'usuarios', icon: '🧙', label: 'Aventureros'  },
+      { id: 'misiones', icon: '📜', label: 'Gestas'      },
+      { id: 'usuarios', icon: '🧙', label: 'Aventureros' },
+    ];
+
+    // Hub principal — cada sección como tarjeta grande
+    const hubTabs = [
+      { id:'misiones', icon:'📜', label:'Gestas',   clases:'bg-gradient-to-br from-rpgCard to-[#2a1a4e] border-rpgPurple', glow:'bg-rpgPurple/20', textColor:'text-rpgYellow' },
+      { id:'tienda',   icon:'⛺', label:'Mercado',  clases:'bg-gradient-to-br from-rpgCard to-[#3a1a0e] border-rpgOrange', glow:'bg-rpgOrange/20', textColor:'text-rpgOrange' },
+      { id:'sala',     icon:'🏰', label:'Taberna',  clases:'bg-gradient-to-br from-rpgCard to-[#1a0a3e] border-rpgBlue',   glow:'bg-rpgBlue/20',   textColor:'text-rpgBlue'   },
+      { id:'mapa',     icon:'🗺️', label:'Mapa',     clases:'bg-gradient-to-br from-rpgCard to-[#0a2a0a] border-rpgGreen',  glow:'bg-rpgGreen/20',  textColor:'text-rpgGreen'  },
+      { id:'perfil',   icon:'🛡️', label:'Héroe',   clases:'bg-gradient-to-br from-rpgCard to-[#1a2a0e] border-rpgGreen',  glow:'bg-rpgGreen/20',  textColor:'text-rpgGreen'  },
+      { id:'mascota',  icon:'🐾', label:'Mascota',  clases:'bg-gradient-to-br from-rpgCard to-[#2a0a3e] border-rpgPurple', glow:'bg-rpgPurple/20', textColor:'text-rpgPurple' },
     ];
 
     const avatarPartes   = [
@@ -1772,6 +2022,7 @@ const app = createApp({
           if (estado.perfilActual.avatar_config && Object.keys(estado.perfilActual.avatar_config).length > 0) {
             Object.assign(avatarConfig, estado.perfilActual.avatar_config);
           }
+          estado.vistaJugador = 'hub'; // siempre arrancar en el hub
           iniciarEscuchaRealtime();
           await nextTick();
           iniciarAvatarMini();
@@ -2660,22 +2911,61 @@ const app = createApp({
       return Math.min(100, Math.round((avance / rango) * 100));
     });
 
-    async function alimentarMascota() {
-      if (!mascotaActiva.value || estado.perfilActual.monedas < 5) return;
-      const nuevaHambre = Math.min(100, mascotaActiva.value.hambre + 15);
+    async function _aplicarAlimento(cantidad, costo) {
+      if (!mascotaActiva.value || estado.perfilActual.monedas < costo) return;
+      const hambreAnterior = mascotaActiva.value.hambre;
+      const nuevaHambre    = Math.min(100, hambreAnterior + cantidad);
+      const eraLegendario  = hambreAnterior >= 100;
+
       const [{ error: e1 }, { error: e2 }] = await Promise.all([
         db.from('mascotas_perfil')
           .update({ hambre: nuevaHambre, ultima_alim: new Date().toISOString() })
           .eq('id', mascotaActiva.value.id),
         db.from('perfiles')
-          .update({ monedas: estado.perfilActual.monedas - 5 })
+          .update({ monedas: estado.perfilActual.monedas - costo })
           .eq('id', estado.perfilActual.id),
       ]);
+
       if (!e1 && !e2) {
         mascotaActiva.value.hambre = nuevaHambre;
-        estado.perfilActual.monedas -= 5;
+        estado.perfilActual.monedas -= costo;
+
+        // Detectar evolución — si cruza un umbral de evolución
+        const evolAntes = _etapaSegunHambre(hambreAnterior);
+        const evolDespues = _etapaSegunHambre(nuevaHambre);
+        if (evolDespues > evolAntes) {
+          estado.mascotaEvolucionando = true;
+          setTimeout(() => { estado.mascotaEvolucionando = false; }, 2500);
+        }
+
+        // Al llegar a 100 por primera vez o mantenerla: sube generación
+        if (!eraLegendario && nuevaHambre >= 100) {
+          const nuevaGen = (mascotaActiva.value.generacion || 0) + 1;
+          await db.from('mascotas_perfil')
+            .update({ generacion: nuevaGen })
+            .eq('id', mascotaActiva.value.id);
+          mascotaActiva.value.generacion = nuevaGen;
+          // Toast especial de evolución legendaria
+          estado.recompensaGanada = {
+            xp: 0, monedas: 0,
+            mensajeEspecial: `🌟 ¡${mascotaActiva.value.nombre} alcanzó su forma Legendaria!`,
+          };
+          setTimeout(() => { estado.recompensaGanada = null; }, 5000);
+        }
       }
     }
+
+    function _etapaSegunHambre(hambre) {
+      if (!mascotaEspecie.value) return 0;
+      let etapa = 0;
+      for (const e of mascotaEspecie.value.evoluciones) {
+        if (hambre >= e.nivel) etapa++;
+      }
+      return etapa;
+    }
+
+    async function alimentarMascota()       { await _aplicarAlimento(15, 5);  }
+    async function alimentarMascotaGrande() { await _aplicarAlimento(30, 10); }
 
     async function guardarNombreMascota() {
       const nombre = mascotaNuevoNombre.value.trim();
@@ -2970,11 +3260,13 @@ const app = createApp({
       // Feature 1: Mascotas
       mascotaActiva, mascotaNuevoNombre,
       iconoMascotaActual, nombreEtapaMascota, proximaEtapaMascota, progresoEvolucion,
-      alimentarMascota, guardarNombreMascota,
+      alimentarMascota, alimentarMascotaGrande, guardarNombreMascota,
       // Feature 2: Mapa
       nodosMapaReino, nodoActual, nodoSiguiente, nodoDesbloqueado, nodoEsActual,
       // Feature 3: Rachas + Cofres
       comprarYAbrirCofre, cerrarCofre,
+      // Hub
+      hubTabs,
     };
   }
 });
