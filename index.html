@@ -333,7 +333,7 @@
               <div class="w-16 h-16 rounded-2xl border-4 border-rpgYellow shadow-brutal overflow-hidden flex items-end justify-center"
                    :style="{ background: `linear-gradient(to bottom, ${avatarProps.piel}22, #1a0a3e)` }">
                 <!-- Personaje mini escalado -->
-                <div class="av2 av2-mini-idle scale-[0.52] origin-bottom mb-0.5" style="gap:0">
+                <div class="av2 av2-mini-idle" style="gap:0;transform:scale(0.48);transform-origin:bottom center;margin-bottom:2px">
                   <!-- Cabeza con pelo -->
                   <div class="relative" style="width:26px;height:26px">
                     <div class="av2-hair absolute" :style="{ background:avatarProps.cabello, width:'100%', height:'55%' }"></div>
@@ -535,8 +535,8 @@
             <h2 class="font-title text-2xl text-rpgOrange uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">Mercado</h2>
           </div>
         </div>
-        <div class="flex gap-2 mb-6 bg-black/30 p-1.5 rounded-2xl border-2 border-black">
-          <button v-for="cat in [{id:'todos',label:'Todo'},{id:'privilegio',label:'⭐ Poderes'},{id:'avatar',label:'🎨 Ropa'},{id:'cofre',label:'📦 Cofres'}]"
+        <div class="flex gap-2 mb-4 bg-black/30 p-1.5 rounded-2xl border-2 border-black">
+          <button v-for="cat in [{id:'todos',label:'🏪 Todo'},{id:'consumible',label:'🧪 Usos'},{id:'equipamiento',label:'⚔️ Equipo'},{id:'mascota',label:'🐾 Mascota'},{id:'cofre',label:'📦 Cofres'}]"
                   :key="cat.id" @click="tiendaCategoria = cat.id"
                   class="flex-1 py-2 rounded-xl text-xs font-bold transition-all border-2"
                   :class="tiendaCategoria===cat.id ? 'bg-rpgOrange text-black border-black shadow-brutal' : 'border-transparent text-gray-400'">
@@ -936,17 +936,39 @@
 
         <div v-else class="grid grid-cols-2 gap-3">
           <div v-for="item in inventario" :key="item.item_nombre"
-               class="bg-rpgCard border-4 border-amber-700/60 rounded-2xl p-4 flex flex-col items-center gap-2 shadow-brutal relative">
-            <div v-if="item.cantidad > 1"
-                 class="absolute -top-2 -right-2 bg-rpgOrange border-2 border-black text-black font-title text-xs w-7 h-7 rounded-full flex items-center justify-center shadow-brutal">
+               class="bg-rpgCard border-4 rounded-2xl p-3 flex flex-col items-center gap-2 shadow-brutal relative cursor-pointer active:scale-95 transition-transform"
+               :class="item._equipado ? 'border-rpgGreen' : item.tipo_item === 'equipamiento' ? 'border-rpgBlue/60' : 'border-amber-700/60'"
+               @click="abrirUsarItem(item)">
+            <!-- Badge cantidad (consumibles) -->
+            <div v-if="item.tipo_item !== 'equipamiento' && item.cantidad > 0"
+                 class="absolute -top-2 -right-2 border-2 border-black text-black font-title text-xs w-7 h-7 rounded-full flex items-center justify-center shadow-brutal z-10"
+                 :class="item.cantidad > 1 ? 'bg-rpgOrange' : 'bg-gray-600 text-white'">
               ×{{ item.cantidad }}
             </div>
-            <div class="text-4xl">{{ item.icono || '🎁' }}</div>
+            <!-- Badge equipado -->
+            <div v-if="item._equipado"
+                 class="absolute -top-2 -left-2 bg-rpgGreen border-2 border-black text-black font-title text-[9px] px-1.5 py-0.5 rounded-full shadow-brutal z-10">
+              ✓ Puesto
+            </div>
+            <!-- Icono -->
+            <div class="text-4xl mt-1 relative">
+              {{ item.icono || '🎁' }}
+              <!-- Brillo si equipado -->
+              <div v-if="item._equipado"
+                   class="absolute inset-0 rounded-full animate-pulse pointer-events-none"
+                   style="box-shadow:0 0 12px rgba(0,255,127,0.6)"></div>
+            </div>
             <p class="font-title text-white text-xs text-center leading-tight">{{ item.item_nombre }}</p>
-            <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border"
-                  :class="item.categoria === 'avatar' ? 'text-rpgPurple border-rpgPurple/40' : 'text-rpgGreen border-rpgGreen/40'">
-              {{ item.categoria === 'avatar' ? '🎨 Cosmético' : '⭐ Poder' }}
+            <!-- Tipo badge -->
+            <span class="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border"
+                  :class="item.tipo_item === 'equipamiento' ? 'text-rpgBlue border-rpgBlue/40' : 'text-rpgOrange border-rpgOrange/40'">
+              {{ item.tipo_item === 'equipamiento' ? '⚔️ Equipo' : '🧪 Consumible' }}
             </span>
+            <!-- Botón TTS pequeño -->
+            <button @click.stop="_hablar(`${item.item_nombre}. ${item.descripcion || ''}`)"
+                    class="w-full py-1 bg-rpgBlue/20 border border-rpgBlue/30 rounded-lg text-[9px] text-rpgBlue font-bold uppercase">
+              🔊 Leer
+            </button>
           </div>
         </div>
       </template>
@@ -1299,10 +1321,10 @@
       </div>
 
       <div class="p-4 space-y-6">
-        <!-- Tabs Admin -->
-        <div class="flex gap-2 bg-black/40 p-2 rounded-2xl border-2 border-black shadow-brutalInset">
+        <!-- Tabs Admin — scroll horizontal en móvil -->
+        <div class="flex gap-2 bg-black/40 p-2 rounded-2xl border-2 border-black shadow-brutalInset overflow-x-auto" style="scrollbar-width:none">
           <button v-for="tab in adminTabs" :key="tab.id" @click="adminTabActivo = tab.id"
-                  class="flex-1 py-3 rounded-xl border-2 font-title text-sm transition-all"
+                  class="flex-shrink-0 px-3 py-2.5 rounded-xl border-2 font-title text-xs transition-all whitespace-nowrap"
                   :class="adminTabActivo === tab.id ? 'bg-rpgPurple border-black text-white shadow-brutal' : 'border-transparent text-gray-400'">
             {{ tab.icon }} {{ tab.label }}
           </button>
@@ -2066,6 +2088,71 @@
     </div>
   </div>
 
+<!-- ==========================================
+       MODAL: CONFIRMACIÓN TEMÁTICO
+       Reemplaza confirm() nativo (bloqueado en mobile)
+  =========================================== -->
+  <div v-if="estado.confirmarModal"
+       class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90"
+       style="backdrop-filter:blur(8px)">
+    <div class="bg-rpgCard border-4 border-rpgOrange rounded-3xl p-6 w-full max-w-xs shadow-brutalXl text-center animate-bounce-in">
+      <div class="text-6xl mb-3">{{ estado.confirmarModal.icono || '⚠️' }}</div>
+      <h3 class="font-title text-white text-xl mb-2" style="text-shadow:2px 2px 0 #000">{{ estado.confirmarModal.titulo }}</h3>
+      <p class="text-gray-400 font-bold text-sm mb-6">{{ estado.confirmarModal.mensaje }}</p>
+      <div class="flex gap-3">
+        <button @click="estado.confirmarModal = null"
+                class="btn-3d flex-1 py-3 rounded-2xl border-4 border-gray-600 bg-gray-800 text-white font-title shadow-brutal uppercase">
+          Cancelar
+        </button>
+        <button @click="estado.confirmarModal.accion(); estado.confirmarModal = null"
+                class="btn-3d flex-1 py-3 rounded-2xl bg-rpgRed border-4 border-black text-white font-title shadow-brutal uppercase">
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: USAR / CONSUMIR ITEM
+  =========================================== -->
+  <div v-if="estado.usarItemModal"
+       class="fixed inset-0 z-[190] flex items-center justify-center p-4 bg-black/90"
+       style="backdrop-filter:blur(8px)">
+    <div class="bg-rpgCard border-4 border-amber-600 rounded-3xl p-6 w-full max-w-xs shadow-brutalXl text-center animate-bounce-in">
+      <div class="text-7xl mb-3 animate-float">{{ estado.usarItemModal.icono || '🎁' }}</div>
+      <h3 class="font-title text-white text-xl mb-1" style="text-shadow:2px 2px 0 #000">{{ estado.usarItemModal.item_nombre }}</h3>
+      <p class="text-amber-400 text-xs font-black uppercase tracking-wider mb-2">
+        {{ estado.usarItemModal.tipo_item === 'equipamiento' ? '⚔️ Equipamiento' : '🧪 Consumible' }}
+      </p>
+      <p v-if="estado.usarItemModal.descripcion" class="text-gray-400 text-sm font-bold mb-4">{{ estado.usarItemModal.descripcion }}</p>
+      <p class="text-gray-500 text-xs font-bold mb-6">
+        {{ estado.usarItemModal.tipo_item === 'equipamiento'
+          ? (estado.usarItemModal._equipado ? '¿Desequipar este objeto?' : '¿Equipar este objeto?')
+          : `Tienes ×${estado.usarItemModal.cantidad}. ¿Usar uno ahora?` }}
+      </p>
+      <!-- Botón TTS -->
+      <button @click="_hablar(`${estado.usarItemModal.item_nombre}. ${estado.usarItemModal.descripcion || ''}`)"
+              class="btn-3d w-full bg-rpgBlue border-2 border-black rounded-xl py-2 font-title text-white text-sm shadow-brutal mb-3 uppercase">
+        🔊 Escuchar descripción
+      </button>
+      <div class="flex gap-3">
+        <button @click="estado.usarItemModal = null"
+                class="btn-3d flex-1 py-3 rounded-2xl border-4 border-gray-600 bg-gray-800 text-white font-title shadow-brutal uppercase text-sm">
+          Cerrar
+        </button>
+        <button @click="confirmarUsarItem"
+                class="btn-3d flex-1 py-3 rounded-2xl border-4 border-black font-title shadow-brutal uppercase text-sm"
+                :class="estado.usarItemModal.tipo_item === 'equipamiento'
+                  ? (estado.usarItemModal._equipado ? 'bg-gray-600 text-white' : 'bg-rpgGreen text-black')
+                  : 'bg-rpgOrange text-black'">
+          {{ estado.usarItemModal.tipo_item === 'equipamiento'
+              ? (estado.usarItemModal._equipado ? '⬇️ Desequipar' : '⚔️ Equipar')
+              : '✨ Usar' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
 </div><!-- /#app -->
 
 <script>
@@ -2088,6 +2175,10 @@ const useGameStore = defineStore('game', () => {
     aprobando: null, recompensaGanada: null, avatarModal: false,
     vistaJugador: 'hub',
     panelAdmin: false,
+    // Modal de confirmación temático (reemplaza confirm() nativo)
+    confirmarModal: null, // { titulo, mensaje, icono, accion }
+    // Modal de usar/consumir item
+    usarItemModal: null,  // { item } — para consumibles del inventario
     comprando: null, eliminandoUsuario: null,
     gestaPendiente: null,
     aceptandoGesta: false,
@@ -2632,15 +2723,26 @@ const app = createApp({
     }
 
     async function eliminarRecompensaCofre(id) {
-      if (!confirm('¿Eliminar esta recompensa?')) return;
-      await db.from('cofres_recompensas').delete().eq('id', id);
-      await cargarCofresConfig();
+      estado.confirmarModal = {
+        titulo: '¿Eliminar recompensa?',
+        mensaje: 'Esta acción no se puede deshacer.',
+        icono: '🗑️',
+        accion: async () => {
+          await db.from('cofres_recompensas').delete().eq('id', id);
+          await cargarCofresConfig();
+        }
+      };
     }
     function iniciarEliminarUsuario(p) { estado.eliminandoUsuario = p; pinEliminar.value = ''; pinEliminarError.value = ''; }
     async function confirmarEliminarUsuario() {
-      if (pinEliminar.value !== '1234') { pinEliminarError.value = 'PIN incorrecto.'; pinEliminar.value = ''; return; }
+      if (pinEliminar.value !== estado.perfilActual.pin) {
+        pinEliminarError.value = 'PIN incorrecto.'; pinEliminar.value = ''; return;
+      }
       const { error } = await db.from('perfiles').delete().eq('id', estado.eliminandoUsuario.id);
-      if (!error) { estado.eliminandoUsuario = null; pinEliminar.value = ''; pinEliminarError.value = ''; await cargarPerfiles(); }
+      if (!error) {
+        estado.eliminandoUsuario = null; pinEliminar.value = '';
+        pinEliminarError.value = ''; await cargarPerfiles();
+      }
     }
     async function crearUsuario() {
       if (!nuevoUsuario.nombre.trim() || nuevoUsuario.pin.length !== 4) return;
@@ -2703,12 +2805,9 @@ const app = createApp({
 
         // Detectar categoría especial del ítem
         if (item.categoria === 'mascota' && item.nombre.toLowerCase().includes('huevo')) {
-          // Si ya tiene mascota no le damos otra (un compañero por jugador)
           if (!mascotaActiva.value) {
             await darMascotaAleatoria();
-            // Ir automáticamente al tab Mascota para que vea el huevo
-            estado.vistaJugador  = 'perfil';
-            estado.vistaPerfilTab = 'mascota';
+            estado.vistaJugador = 'mascota'; // vista independiente correcta
           } else {
             // Ya tiene mascota — el huevo se convierte en comida extra
             const nuevaHambre = Math.min(100, mascotaActiva.value.hambre + 10);
@@ -2726,9 +2825,7 @@ const app = createApp({
               .update({ hambre: nuevaHambre, ultima_alim: new Date().toISOString() })
               .eq('id', mascotaActiva.value.id);
             mascotaActiva.value.hambre = nuevaHambre;
-            // Ir al tab mascota para ver el efecto
-            estado.vistaJugador   = 'perfil';
-            estado.vistaPerfilTab = 'mascota';
+            estado.vistaJugador = 'mascota';
           }
         }
       }
@@ -2828,34 +2925,82 @@ const app = createApp({
     // ---- Inventario ----
     const inventario = ref([]); // array de { item_nombre, icono, categoria, cantidad }
 
+    const equipamiento = ref([]); // items actualmente equipados
+
     async function cargarInventario() {
       if (!estado.perfilActual) return;
 
-      // Join con tienda_items para traer icono y categoría en una sola query
-      // Evita la dependencia del orden de carga con cargarTienda()
-      const { data } = await db.from('compras')
-        .select('item_nombre, item_id, precio_pagado, tienda_items(icono, categoria, nombre)')
-        .eq('perfil_id', estado.perfilActual.id)
-        .order('created_at', { ascending: false });
+      const [{ data }, { data: equipado }] = await Promise.all([
+        db.from('compras')
+          .select('id, item_nombre, item_id, precio_pagado, tienda_items(icono, categoria, nombre, descripcion, tipo_item, slot_equipo)')
+          .eq('perfil_id', estado.perfilActual.id)
+          .eq('estado', 'activo')   // solo los no consumidos
+          .order('created_at', { ascending: false }),
+        db.from('perfil_equipamiento')
+          .select('item_nombre')
+          .eq('perfil_id', estado.perfilActual.id),
+      ]);
 
-      if (!data) { inventario.value = []; return; }
+      const equipadosSet = new Set((equipado || []).map(e => e.item_nombre));
 
-      // Agrupar por item_nombre con datos del join
       const mapa = {};
-      data.forEach(c => {
+      (data || []).forEach(c => {
         const key = c.item_nombre;
         if (!mapa[key]) {
           const def = c.tienda_items || {};
           mapa[key] = {
             item_nombre: c.item_nombre,
-            icono:       def.icono     || '🎁',
-            categoria:   def.categoria || 'privilegio',
+            icono:       def.icono       || '🎁',
+            categoria:   def.categoria   || 'consumible',
+            tipo_item:   def.tipo_item   || 'consumible',
+            slot_equipo: def.slot_equipo || null,
+            descripcion: def.descripcion || '',
             cantidad:    0,
+            ids:         [],  // IDs de compras individuales para consumir
+            _equipado:   equipadosSet.has(key),
           };
         }
         mapa[key].cantidad++;
+        mapa[key].ids.push(c.id);
       });
       inventario.value = Object.values(mapa).sort((a,b) => b.cantidad - a.cantidad);
+    }
+
+    function abrirUsarItem(item) {
+      estado.usarItemModal = { ...item };
+    }
+
+    async function confirmarUsarItem() {
+      const item = estado.usarItemModal;
+      if (!item) return;
+
+      if (item.tipo_item === 'equipamiento') {
+        // Toggle equipar/desequipar
+        if (item._equipado) {
+          await db.from('perfil_equipamiento')
+            .delete()
+            .eq('perfil_id', estado.perfilActual.id)
+            .eq('item_nombre', item.item_nombre);
+        } else {
+          await db.from('perfil_equipamiento').upsert({
+            perfil_id:   estado.perfilActual.id,
+            item_nombre: item.item_nombre,
+            equipado_en: item.slot_equipo || 'accesorio',
+          }, { onConflict: 'perfil_id,item_nombre', ignoreDuplicates: false });
+        }
+        estado.usarItemModal = null;
+        await cargarInventario();
+        return;
+      }
+
+      // Consumible: marcar la compra más antigua como consumida
+      if (item.ids && item.ids.length > 0) {
+        await db.from('compras')
+          .update({ estado: 'consumido' })
+          .eq('id', item.ids[item.ids.length - 1]);
+        estado.usarItemModal = null;
+        await cargarInventario();
+      }
     }
 
     // ---- Foto de perfil ----
@@ -3550,7 +3695,8 @@ const app = createApp({
       leerMision, leerMensajeChat, comprarItem,
       enviarMensajeChat,
       // Inventario, foto, stats, math quest
-      inventario, subirFotoPerfil, eliminarFotoPerfil, statsCalculados,
+      inventario, equipamiento, abrirUsarItem, confirmarUsarItem,
+      subirFotoPerfil, eliminarFotoPerfil, statsCalculados,
       mathQuest, responderMathQuest, siguientePreguntaMath,
       // Feature 1: Mascotas
       mascotaActiva, mascotaNuevoNombre,
