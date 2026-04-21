@@ -330,10 +330,10 @@
           <div class="flex items-center gap-3">
             <!-- Avatar 2.5D mini — reactivo a avatarConfig, sin WebGL -->
             <div class="relative cursor-pointer" @click="abrirAvatarEditor()">
-              <div class="w-16 h-16 rounded-2xl border-4 border-rpgYellow shadow-brutal overflow-hidden flex items-end justify-center"
+              <div class="w-16 h-16 rounded-2xl border-4 border-rpgYellow shadow-brutal overflow-hidden flex items-center justify-center"
                    :style="{ background: `linear-gradient(to bottom, ${avatarProps.piel}22, #1a0a3e)` }">
-                <!-- Personaje mini escalado -->
-                <div class="av2 av2-mini-idle" style="gap:0;transform:scale(0.48);transform-origin:bottom center;margin-bottom:2px">
+                <!-- Personaje mini escalado — tamaño nativo ~120px, escala a 55px aprox -->
+                <div class="av2 av2-mini-idle" style="gap:0;transform:scale(0.38);transform-origin:center center">
                   <!-- Cabeza con pelo -->
                   <div class="relative" style="width:26px;height:26px">
                     <div class="av2-hair absolute" :style="{ background:avatarProps.cabello, width:'100%', height:'55%' }"></div>
@@ -601,12 +601,66 @@
           <span class="text-4xl drop-shadow-md">🏰</span>
           <h2 class="font-title text-2xl text-rpgPurple uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">La Taberna</h2>
         </div>
-        <!-- Escenario 3D -->
-        <div class="bg-gradient-to-b from-[#1a0f2e] to-[#0a0514] border-4 border-rpgPurple rounded-3xl overflow-hidden shadow-brutalLg relative mb-4">
-          <canvas id="hall-canvas" class="w-full h-48 block"></canvas>
+        <!-- Escenario CSS 2.5D — Taberna sin Three.js -->
+        <div class="bg-gradient-to-b from-[#1a0f2e] to-[#0a0514] border-4 border-rpgPurple rounded-3xl overflow-hidden shadow-brutalLg relative mb-4" style="min-height:12rem">
+          <!-- Suelo decorativo -->
+          <div class="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-[#0d0820] to-transparent"></div>
+          <!-- Antorchas decorativas -->
+          <div class="absolute top-3 left-4 text-2xl animate-float" style="animation-duration:2s">🔥</div>
+          <div class="absolute top-3 right-4 text-2xl animate-float" style="animation-duration:2.5s">🔥</div>
+          <!-- Estrellas/partículas de fondo -->
+          <div v-for="s in 6" :key="s" class="absolute w-1 h-1 bg-white rounded-full opacity-40"
+               :style="`left:${10+s*14}%;top:${15+((s*37)%40)}%;animation:av2-idle ${1.5+s*0.3}s ease-in-out infinite`"></div>
+
+          <!-- Avatares 2.5D de jugadores presentes -->
+          <div class="absolute bottom-6 left-0 right-0 flex justify-center items-end gap-4 px-4">
+            <div v-if="jugadoresPresentes.length === 0" class="text-center py-8 w-full">
+              <p class="text-gray-600 text-xs font-bold">La taberna está vacía...</p>
+            </div>
+            <div v-for="(jugador, idx) in jugadoresPresentes" :key="jugador.id"
+                 class="flex flex-col items-center gap-1">
+              <!-- Mini avatar del jugador usando su config -->
+              <div class="relative">
+                <div class="av2 av2-mini-idle" style="gap:0;transform:scale(0.46);transform-origin:bottom center">
+                  <div class="relative" style="width:26px;height:26px">
+                    <div class="av2-hair absolute" :style="{ background: jugador.config?.cabello || '#3D2314', width:'100%', height:'55%' }"></div>
+                    <div class="av2-head w-full h-full" :style="{ background: jugador.config?.piel || '#FDBCB4' }">
+                      <div class="av2-eyes absolute" style="bottom:38%;left:50%;transform:translateX(-50%);gap:5px">
+                        <div class="av2-eye" style="width:5px;height:5px"></div>
+                        <div class="av2-eye" style="width:5px;height:5px"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="relative" style="width:22px;height:18px">
+                    <div class="av2-arm izq" :style="{ background: jugador.config?.ropa || '#FF6B35', width:'6px', height:'13px' }"></div>
+                    <div class="av2-arm der" :style="{ background: jugador.config?.ropa || '#FF6B35', width:'6px', height:'13px' }"></div>
+                    <div class="av2-body w-full h-full" :style="{ background: jugador.config?.ropa || '#FF6B35' }"></div>
+                  </div>
+                  <div class="av2-belt" style="width:22px;height:4px"><div class="av2-belt-buckle"></div></div>
+                  <div class="av2-legs" style="gap:3px">
+                    <div class="av2-leg" :style="{ background: jugador.config?.pantalon || '#1A1A2E', width:'9px', height:'12px' }"></div>
+                    <div class="av2-leg" :style="{ background: jugador.config?.pantalon || '#1A1A2E', width:'9px', height:'12px' }"></div>
+                  </div>
+                  <div class="av2-shoes" style="gap:3px">
+                    <div class="av2-shoe" style="width:10px;height:4px"></div>
+                    <div class="av2-shoe" style="width:10px;height:4px"></div>
+                  </div>
+                </div>
+                <!-- Corona si es el jugador actual -->
+                <div v-if="jugador.id === estado.perfilActual?.id"
+                     class="absolute -top-3 left-1/2 -translate-x-1/2 text-sm">👑</div>
+              </div>
+              <p class="text-[9px] font-bold text-white truncate max-w-[50px] text-center"
+                 :class="jugador.id === estado.perfilActual?.id ? 'text-rpgYellow' : 'text-gray-300'">
+                {{ jugador.nombre || '?' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Badge online -->
           <div class="absolute top-2 right-2 bg-black/60 border border-rpgPurple rounded-lg px-2 py-1 flex items-center gap-1.5 z-20">
             <div class="w-2 h-2 bg-rpgGreen rounded-full animate-pulse" style="box-shadow:0 0 8px #00FF7F"></div>
-            <span class="text-xs font-bold text-white">{{ Object.keys(jugadoresOnline).length }} Online</span>
+            <span class="text-xs font-bold text-white">{{ jugadoresPresentes.length }} Online</span>
           </div>
         </div>
         <!-- Chat UI -->
@@ -1085,181 +1139,185 @@
 
     <!-- ===== VISTA: MASCOTA (sección independiente) ===== -->
       <template v-if="estado.vistaJugador === 'mascota'">
-        <div class="flex items-center gap-3 mb-4">
-          <span class="text-4xl drop-shadow-md">🐾</span>
-          <h2 class="font-title text-2xl text-rpgPurple uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">Compañero</h2>
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <span class="text-4xl drop-shadow-md">🐾</span>
+            <h2 class="font-title text-2xl text-rpgPurple uppercase tracking-widest" style="text-shadow:2px 2px 0 #000">Compañeros</h2>
+          </div>
+          <span class="bg-rpgPurple/20 border-2 border-rpgPurple text-rpgPurple font-black text-sm px-3 py-1 rounded-full">
+            {{ slotsOcupados }}/3 slots
+          </span>
         </div>
 
-        <!-- Sin mascota -->
-        <div v-if="!mascotaActiva" class="bg-rpgCard border-4 border-dashed border-rpgPurple/50 rounded-3xl p-10 text-center shadow-brutal">
-          <div class="text-7xl mb-4 animate-float">🥚</div>
-          <p class="font-title text-rpgPurple text-xl mb-2">Sin Compañero</p>
-          <p class="text-gray-400 font-bold mb-4">Compra un Huevo Misterioso en el Mercado.</p>
-          <button @click="estado.vistaJugador = 'tienda'"
-                  class="btn-3d bg-rpgOrange border-4 border-black rounded-2xl px-6 py-3 font-title text-black shadow-brutal uppercase">
-            Ir al Mercado ⛺
+        <!-- Selector de slots -->
+        <div class="flex gap-2 mb-4">
+          <button v-for="(slot, idx) in mascotasSlots" :key="idx"
+                  @click="mascotaSlotActivo = idx"
+                  class="flex-1 py-3 rounded-2xl border-4 font-title text-sm transition-all flex flex-col items-center gap-1"
+                  :class="mascotaSlotActivo === idx
+                    ? 'bg-rpgPurple border-black text-white shadow-brutal'
+                    : 'bg-black/30 border-gray-700 text-gray-500'">
+            <span class="text-xs font-black uppercase tracking-wider">Slot {{ idx+1 }}</span>
+            <span class="text-lg">{{ slot ? (slot.fase === 0 ? '🥚' : '🐾') : '⬜' }}</span>
+            <span v-if="slot" class="text-[9px] truncate max-w-full px-1">{{ slot.nombre }}</span>
+            <span v-else class="text-[9px] text-gray-600">Vacío</span>
           </button>
         </div>
 
-        <!-- Con mascota -->
+        <!-- Slot vacío -->
+        <div v-if="!mascotaActiva" class="bg-rpgCard border-4 border-dashed border-rpgPurple/40 rounded-3xl p-10 text-center shadow-brutal">
+          <div class="w-32 h-32 mx-auto mb-4 opacity-40" v-html="svgHuevo()"></div>
+          <p class="font-title text-rpgPurple text-xl mb-2">Slot Vacío</p>
+          <p class="text-gray-400 font-bold mb-1 text-sm">Compra un Huevo Misterioso en el Mercado</p>
+          <p class="text-gray-600 text-xs font-bold mb-5">
+            {{ slotsOcupados >= 3 ? '⚠️ Slots llenos — libera un compañero para obtener otro' : `${3 - slotsOcupados} slot(s) disponible(s)` }}
+          </p>
+          <button @click="estado.vistaJugador = 'tienda'"
+                  :disabled="slotsOcupados >= 3"
+                  class="btn-3d border-4 border-black rounded-2xl px-6 py-3 font-title text-black shadow-brutal uppercase"
+                  :class="slotsOcupados >= 3 ? 'bg-gray-600 text-gray-400 cursor-not-allowed' : 'bg-rpgOrange'">
+            {{ slotsOcupados >= 3 ? '🔒 Slots llenos' : 'Ir al Mercado ⛺' }}
+          </button>
+        </div>
+
+        <!-- Slot con mascota -->
         <div v-else class="space-y-4">
-          <!-- Canvas 2D de la mascota -->
-          <div class="bg-gradient-to-b from-[#1a0a3e] to-[#0a0520] border-4 border-rpgPurple rounded-3xl overflow-hidden shadow-brutalLg relative"
-               style="min-height:260px">
-            <!-- Fondo decorativo -->
-            <div class="absolute inset-0 overflow-hidden pointer-events-none">
-              <div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-[#0a0520] to-transparent"></div>
-              <!-- Partículas de fondo según etapa -->
-              <div v-if="mascotaActiva.hambre >= 100" class="absolute inset-0">
-                <div v-for="i in 8" :key="i"
-                     class="absolute text-2xl animate-float"
-                     :style="`left:${10+i*10}%;top:${20+((i*37)%50)}%;animation-delay:${i*0.3}s;animation-duration:${2+i*0.4}s;opacity:0.6`">
-                  ✨
-                </div>
-              </div>
-              <div v-else-if="mascotaActiva.hambre >= 60" class="absolute inset-0">
-                <div v-for="i in 5" :key="i"
-                     class="absolute text-xl animate-float"
-                     :style="`left:${15+i*15}%;top:${30+((i*41)%40)}%;animation-delay:${i*0.5}s;animation-duration:${3+i*0.3}s;opacity:0.4`">
-                  🌟
-                </div>
-              </div>
+
+          <!-- Escenario de la mascota -->
+          <div class="rounded-3xl border-4 border-rpgPurple overflow-hidden shadow-brutalLg relative"
+               :style="`background: linear-gradient(180deg, #1a0a3e 0%, #0a0520 100%); min-height: 260px`">
+
+            <!-- Partículas de fondo según fase -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden">
+              <div v-if="mascotaActiva.fase >= 3" v-for="i in 8" :key="i"
+                   class="absolute w-1 h-1 bg-rpgYellow rounded-full animate-float opacity-60"
+                   :style="`left:${10+i*10}%;top:${20+((i*37)%50)}%;animation-delay:${i*0.3}s`"></div>
+              <div v-else-if="mascotaActiva.fase >= 2" v-for="j in 5" :key="j"
+                   class="absolute w-1 h-1 bg-rpgPurple rounded-full animate-float opacity-40"
+                   :style="`left:${15+j*14}%;top:${25+((j*41)%45)}%;animation-delay:${j*0.5}s`"></div>
             </div>
 
-            <!-- Mascota central — emoji grande animado -->
-            <div class="relative z-10 flex flex-col items-center justify-center pt-8 pb-4">
-              <!-- Sombra debajo -->
-              <div class="w-24 h-4 bg-black/40 rounded-full blur-md mb-[-8px] mx-auto"></div>
+            <!-- Rareza badge -->
+            <div class="absolute top-3 left-3 z-10">
+              <span class="font-black text-xs uppercase tracking-wider px-2 py-0.5 rounded-full border-2 border-black bg-black/60"
+                    :class="RAREZA_COLORS[mascotaActiva.rareza]">
+                {{ RAREZA_LABELS[mascotaActiva.rareza] }}
+              </span>
+            </div>
 
-              <!-- Emoji principal con animación según estado -->
+            <!-- Estado: esperando misión -->
+            <div v-if="mascotaActiva.esperando_mision"
+                 class="absolute top-3 right-3 z-10 bg-rpgYellow border-2 border-black rounded-full px-2 py-0.5">
+              <span class="text-black font-black text-[10px] uppercase">⏳ Esperando DM</span>
+            </div>
+
+            <!-- SVG Mascota principal -->
+            <div class="relative z-10 flex flex-col items-center justify-center pt-10 pb-2">
               <div class="relative">
-                <!-- Aura legendaria -->
-                <div v-if="mascotaActiva.hambre >= 100"
+                <!-- Aura según fase -->
+                <div v-if="mascotaActiva.fase >= 3"
                      class="absolute inset-[-20px] rounded-full animate-pulse"
-                     style="background:radial-gradient(circle,rgba(255,215,0,0.3),transparent 70%)"></div>
-                <!-- Aura adulto -->
-                <div v-else-if="mascotaActiva.hambre >= 60"
+                     style="background:radial-gradient(circle,rgba(255,215,0,0.25),transparent 70%)"></div>
+                <div v-else-if="mascotaActiva.fase >= 2"
                      class="absolute inset-[-12px] rounded-full animate-pulse"
-                     style="background:radial-gradient(circle,rgba(123,47,190,0.3),transparent 70%)"></div>
+                     style="background:radial-gradient(circle,rgba(123,47,190,0.2),transparent 70%)"></div>
 
-                <!-- Efecto flash de evolución -->
-                <div v-if="estado.mascotaEvolucionando"
-                     class="absolute inset-[-40px] rounded-full animate-ping"
-                     style="background:radial-gradient(circle,rgba(255,215,0,0.6),transparent 60%);z-index:20"></div>
-
-                <!-- Emoji principal -->
-                <div class="animate-float relative z-10 select-none transition-all duration-500"
-                     :class="estado.mascotaEvolucionando ? 'scale-150' : 'scale-100'"
-                     :style="`font-size:${mascotaActiva.hambre >= 60 ? '96' : mascotaActiva.hambre >= 25 ? '80' : '64'}px;animation-duration:${mascotaActiva.hambre >= 60 ? '2' : '3'}s;filter:drop-shadow(0 8px 16px rgba(0,0,0,0.6))`">
-                  {{ iconoMascotaActual }}
+                <!-- SVG mascota — tamaño dinámico según fase -->
+                <div class="animate-float select-none"
+                     :style="`width:${mascotaActiva.fase >= 2 ? 140 : mascotaActiva.fase >= 1 ? 110 : 90}px;height:${mascotaActiva.fase >= 2 ? 140 : mascotaActiva.fase >= 1 ? 110 : 90}px;filter:drop-shadow(0 8px 16px rgba(0,0,0,0.6))`"
+                     v-html="svgMascota(mascotaActiva.tipo, mascotaActiva.fase)">
                 </div>
               </div>
 
-              <!-- Nombre y etapa -->
-              <p class="font-title text-white text-2xl mt-4" style="text-shadow:2px 2px 0 #000">
-                {{ mascotaActiva.nombre }}
-              </p>
-              <div class="flex items-center gap-2 mt-1">
-                <span class="text-rpgPurple text-xs font-black uppercase tracking-widest">{{ nombreEtapaMascota }}</span>
-                <!-- Generación si es > 1 -->
-                <span v-if="(mascotaActiva.generacion || 0) > 0"
-                      class="bg-rpgYellow text-black text-[10px] font-black px-2 py-0.5 rounded-full border-2 border-black shadow-brutal">
-                  Gen {{ (mascotaActiva.generacion || 0) + 1 }}
-                </span>
-              </div>
-
-              <!-- Mensaje de estado emocional -->
-              <p class="text-sm font-bold mt-2 px-4 text-center"
-                 :class="mascotaActiva.hambre >= 80 ? 'text-rpgGreen' : mascotaActiva.hambre >= 40 ? 'text-rpgYellow' : 'text-rpgRed'">
-                {{ mascotaActiva.hambre >= 80 ? '😊 ¡Estoy feliz y lleno de energía!' : mascotaActiva.hambre >= 40 ? '😐 Estoy bien, pero podría comer...' : '😢 ¡Tengo hambre! ¡Por favor aliméntame!' }}
+              <!-- Nombre y fase -->
+              <p class="font-title text-white text-xl mt-3" style="text-shadow:2px 2px 0 #000">{{ mascotaActiva.nombre }}</p>
+              <p class="font-black text-xs uppercase tracking-widest mt-0.5"
+                 :style="{ color: mascotaFaseInfo.color }">
+                {{ mascotaFaseInfo.nombre }}
               </p>
             </div>
 
-            <!-- Barra de hambre integrada en el canvas -->
-            <div class="relative z-10 px-5 pb-4">
+            <!-- Barra de XP de alimentación -->
+            <div class="relative z-10 px-5 pb-4" v-if="mascotaActiva.fase > 0 && mascotaActiva.fase < 3">
               <div class="flex justify-between items-center mb-1">
-                <span class="text-xs font-black text-rpgOrange uppercase tracking-wider">🍖 Nutrición</span>
-                <span class="font-title text-white text-sm">{{ mascotaActiva.hambre }}/100</span>
+                <span class="text-xs font-black text-rpgOrange uppercase tracking-wider">
+                  {{ mascotaActiva.esperando_mision ? '⏳ Evolución lista' : '🍖 Progreso' }}
+                </span>
+                <span class="font-title text-white text-xs">{{ mascotaActiva.xp_fase }}/{{ mascotaFaseInfo.xp_max }}</span>
               </div>
               <div class="h-4 bg-black/60 rounded-full border-2 border-gray-800 overflow-hidden">
                 <div class="h-full rounded-full transition-all duration-700 relative overflow-hidden"
-                     :class="mascotaActiva.hambre > 60 ? 'bg-rpgGreen' : mascotaActiva.hambre > 30 ? 'bg-rpgYellow' : 'bg-rpgRed'"
-                     :style="{ width: mascotaActiva.hambre + '%' }">
+                     :style="{ width: mascotaProgresoXP + '%', background: mascotaActiva.esperando_mision ? '#FFD700' : mascotaFaseInfo.color }">
                   <div class="absolute inset-0 bar-stripes animate-stripes opacity-30"></div>
                 </div>
               </div>
+              <p v-if="mascotaActiva.esperando_mision" class="text-rpgYellow text-[10px] font-bold text-center mt-1">
+                ¡Barra llena! El Dungeon Master debe aprobar la misión de evolución.
+              </p>
+            </div>
+
+            <!-- Adulto: mensaje especial -->
+            <div v-if="mascotaActiva.fase >= 3" class="px-5 pb-4 text-center">
+              <p class="text-rpgYellow font-bold text-sm">🏆 ¡Forma Adulta alcanzada!</p>
+              <p class="text-gray-400 text-xs mt-1">Tu compañero está en su máximo poder.</p>
             </div>
           </div>
 
-          <!-- Progreso de evolución -->
-          <div class="bg-rpgCard border-2 border-gray-700 rounded-2xl p-4 shadow-brutal">
-            <div v-if="proximaEtapaMascota">
-              <div class="flex justify-between items-center mb-2">
-                <span class="text-xs text-gray-400 font-bold uppercase tracking-wider">Próxima forma</span>
-                <span class="font-title text-rpgBlue text-sm">{{ proximaEtapaMascota.nombre }}</span>
-              </div>
-              <div class="h-3 bg-black rounded-full border-2 border-gray-800 overflow-hidden mb-1">
-                <div class="h-full bg-rpgBlue rounded-full transition-all"
-                     :style="{ width: progresoEvolucion + '%' }"></div>
-              </div>
-              <p class="text-[10px] text-gray-600 font-bold text-right">
-                Necesita {{ proximaEtapaMascota.nivel - mascotaActiva.hambre }} de nutrición más
-              </p>
+          <!-- Barra de próxima evolución -->
+          <div v-if="proximaEtapaMascota && !mascotaActiva.esperando_mision && mascotaActiva.fase > 0"
+               class="bg-rpgCard border-2 border-gray-700 rounded-2xl p-4 shadow-brutal">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-xs text-gray-400 font-bold uppercase tracking-wider">Próxima fase</span>
+              <span class="font-title text-rpgBlue text-sm">{{ proximaEtapaMascota.nombre }}</span>
             </div>
-            <div v-else class="text-center">
-              <p class="text-rpgYellow font-title text-sm">🏆 ¡Forma Legendaria alcanzada!</p>
-              <p class="text-gray-400 text-xs font-bold mt-1">
-                Sigue alimentándola para mantenerla feliz.<br/>
-                Al llegar a nueva generación mantendrá su poder legendario.
-              </p>
+            <div class="h-3 bg-black rounded-full border-2 border-gray-800 overflow-hidden">
+              <div class="h-full rounded-full transition-all"
+                   :style="{ width: mascotaProgresoXP + '%', background: proximaEtapaMascota.color }"></div>
             </div>
           </div>
 
-          <!-- Racha de acceso aquí también -->
-          <div class="bg-rpgCard border-2 border-gray-700 rounded-2xl p-4 shadow-brutal">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2">
-                <span class="text-2xl">🔥</span>
-                <div>
-                  <p class="font-title text-white text-sm">Racha de Aventura</p>
-                  <p class="text-gray-500 text-xs font-bold">Días consecutivos activo</p>
-                </div>
-              </div>
-              <div class="text-right">
-                <p class="font-title text-rpgOrange text-2xl">{{ estado.perfilActual.racha_actual || 0 }}</p>
-                <p class="text-gray-600 text-[10px] font-bold uppercase">días</p>
-              </div>
-            </div>
-            <div class="flex gap-1 justify-center">
-              <div v-for="d in 7" :key="d"
-                   class="w-9 h-9 rounded-xl border-2 flex items-center justify-center text-sm font-black"
-                   :class="d <= ((estado.perfilActual.racha_actual || 0) % 7) || (estado.perfilActual.racha_actual || 0) >= 7
-                     ? 'bg-rpgOrange border-black text-black' : 'bg-black/40 border-gray-700 text-gray-600'">
-                {{ d <= ((estado.perfilActual.racha_actual || 0) % 7) || (estado.perfilActual.racha_actual || 0) >= 7 ? '🔥' : d }}
-              </div>
-            </div>
-            <div class="mt-3 bg-black/40 rounded-xl px-3 py-2 flex items-center justify-between border border-gray-700">
-              <span class="text-xs text-gray-400 font-bold">⭐ Multiplicador XP</span>
-              <span class="font-title text-rpgGreen text-sm">×{{ (estado.perfilActual.multiplicador_xp || 1).toFixed(2) }}</span>
-            </div>
+          <!-- Banner esperando misión -->
+          <div v-if="mascotaActiva.esperando_mision"
+               class="bg-rpgYellow/10 border-4 border-rpgYellow rounded-2xl p-4 shadow-brutal text-center">
+            <p class="font-title text-rpgYellow text-base">⚡ ¡Listo para evolucionar!</p>
+            <p class="text-gray-300 text-xs font-bold mt-1">
+              Se creó una misión especial. Pídele al <span class="text-rpgYellow">Dungeon Master</span> que la apruebe para que tu compañero evolucione.
+            </p>
           </div>
 
           <!-- Botones de acción -->
           <div class="flex gap-3">
-            <button @click="alimentarMascota"
-                    :disabled="estado.perfilActual.monedas < 5"
-                    class="btn-3d flex-1 bg-rpgOrange border-4 border-black rounded-2xl py-4 font-title text-black shadow-brutal uppercase">
-              🍖 Alimentar<br><span class="text-xs">5 🪙</span>
+            <!-- Alimentar (bloqueado si huevo, adulto, o esperando misión) -->
+            <button @click="alimentarMascotaSlot(mascotaSlotActivo)"
+                    :disabled="estado.perfilActual.monedas < 5 || mascotaActiva.fase === 0 || mascotaActiva.fase >= 3 || mascotaActiva.esperando_mision"
+                    class="btn-3d flex-1 border-4 border-black rounded-2xl py-3 font-title text-sm shadow-brutal uppercase"
+                    :class="(mascotaActiva.fase === 0 || mascotaActiva.fase >= 3 || mascotaActiva.esperando_mision || estado.perfilActual.monedas < 5)
+                      ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                      : 'bg-rpgOrange text-black'">
+              🍖 Alimentar<br><span class="text-[10px]">5 🪙 +20 XP</span>
             </button>
-            <button @click="alimentarMascotaGrande"
-                    :disabled="estado.perfilActual.monedas < 10"
-                    class="btn-3d flex-1 bg-rpgYellow border-4 border-black rounded-2xl py-4 font-title text-black shadow-brutal uppercase">
-              🍗 Festín<br><span class="text-xs">10 🪙 +30</span>
-            </button>
+
+            <!-- Renombrar -->
             <button @click="estado.mascotaNombrando = true"
-                    class="btn-3d w-14 bg-rpgPurple border-4 border-black rounded-2xl flex items-center justify-center text-white shadow-brutal text-2xl">
+                    class="btn-3d w-12 bg-rpgPurple border-4 border-black rounded-2xl flex items-center justify-center text-white shadow-brutal text-xl">
               ✏️
             </button>
+
+            <!-- Liberar -->
+            <button @click="liberarMascota(mascotaSlotActivo)"
+                    class="btn-3d w-12 bg-rpgRed border-4 border-black rounded-2xl flex items-center justify-center text-white shadow-brutal text-xl">
+              🗑️
+            </button>
+          </div>
+
+          <!-- Tip si es huevo -->
+          <div v-if="mascotaActiva.fase === 0" class="bg-rpgCard border-2 border-rpgYellow/40 rounded-2xl p-3 text-center">
+            <p class="text-rpgYellow font-bold text-xs">🥚 Huevo Misterioso</p>
+            <p class="text-gray-400 text-[10px] mt-1">Pídele al Dungeon Master que apruebe la misión de eclosión para revelar qué hay dentro.</p>
+            <p class="text-xs font-black mt-1" :class="RAREZA_COLORS[mascotaActiva.rareza]">
+              Rareza: {{ RAREZA_LABELS[mascotaActiva.rareza] }}
+            </p>
           </div>
         </div>
       </template>
@@ -1286,7 +1344,7 @@
                 {{ misionesDisponibles.length }}
               </div>
               <!-- Badge mascota hambrienta -->
-              <div v-if="tab.id === 'mascota' && mascotaActiva && mascotaActiva.hambre < 20"
+              <div v-if="tab.id === 'mascota' && mascotasSlots.some(s => s && s.fase > 0 && s.xp_fase < 30 && !s.esperando_mision)"
                    class="absolute top-2 right-2 bg-rpgOrange border-2 border-black text-black font-black text-xs w-6 h-6 rounded-full flex items-center justify-center shadow-brutal animate-bounce z-20">
                 🍖
               </div>
@@ -2067,7 +2125,7 @@
        style="backdrop-filter:blur(6px)">
     <div class="bg-rpgCard border-4 border-rpgPurple rounded-3xl p-6 w-full max-w-xs shadow-brutalXl">
       <div class="text-center mb-5">
-        <div class="text-5xl mb-2">{{ iconoMascotaActual }}</div>
+        <div class="w-16 h-16 mx-auto mb-2" v-html="mascotaActiva ? svgMascota(mascotaActiva.tipo, mascotaActiva.fase) : svgHuevo()"></div>
         <h2 class="font-title text-rpgPurple text-xl uppercase" style="text-shadow:2px 2px 0 #000">¿Cómo se llamará?</h2>
       </div>
       <input v-model="mascotaNuevoNombre"
@@ -2238,20 +2296,10 @@ const app = createApp({
 
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // ---- Optimización Three.js (IntersectionObserver) ----
-    const canvasVisibility = reactive({
-      'avatar-mini': true,
-      'avatar-canvas': true,
-      'hall-canvas': true
-    });
-    let canvasObserver = null;
-
     const editandoUsuario  = ref(null);
     const pinEliminar      = ref('');
     const pinEliminarError = ref('');
     const jugadoresOnline  = ref({});
-    const modelosHall      = new Map();
-    let hallScene = null, hallRenderer = null, hallCamera = null, hallAnimId = null;
 
     const tiendaItems      = ref([]);
     const misioesHistorial = ref([]);
@@ -2329,8 +2377,6 @@ const app = createApp({
     };
 
     let canalRealtime = null;
-    // Three.js eliminado — avatar migrado a CSS 2.5D
-    // Variables hall mantenidas arriba (líneas editandoUsuario/modelosHall)
 
     // ================================================================
     // SISTEMA AVATAR 2.5D — Generador de props CSS reactivo
@@ -2424,12 +2470,10 @@ const app = createApp({
     }
 
     function cerrarSesion() {
-      if (canalRealtime)  { db.removeChannel(canalRealtime); canalRealtime = null; }
-      if (hallAnimId)     { cancelAnimationFrame(hallAnimId); hallAnimId = null; }
-      if (hallRenderer)   { hallRenderer.dispose(); hallRenderer = null; }
-      modelosHall.clear(); hallScene = null;
-      jugadoresOnline.value = {};
-      estado.perfilActual = null;
+      if (canalRealtime) { db.removeChannel(canalRealtime); canalRealtime = null; }
+      jugadoresOnline.value  = {};
+      jugadoresPresentes.value = [];
+      estado.perfilActual    = null;
       loginState.perfilSeleccionado = null; loginState.pin = '';
     }
 
@@ -2562,15 +2606,55 @@ const app = createApp({
       ]);
 
       if (!errPerfil && !errMision) {
-        // Actualizar estado local solo si la escritura fue exitosa
         if (estado.perfilActual?.id === jugadorId) {
           estado.perfilActual.xp               = nuevoXP;
           estado.perfilActual.nivel             = nuevoNivel;
           estado.perfilActual.monedas           = nuevasMonedas;
           estado.perfilActual.misiones_completadas = misionesComp;
         }
+
+        // ---- Mission-Gating: detectar si era misión de evolución de mascota ----
+        if (mision.tipo_especial === 'evolucion_mascota' && mision.mascota_id) {
+          try {
+            const { data: mascotaEv } = await db.from('perfil_mascotas')
+              .select('id, fase, xp_fase')
+              .eq('id', mision.mascota_id)
+              .single();
+
+            if (mascotaEv && mascotaEv.fase < 3) {
+              const nuevaFase = mascotaEv.fase + 1;
+              // Al eclosionar el huevo (fase 0→1), revelamos el tipo real
+              const updates = {
+                fase:             nuevaFase,
+                xp_fase:          0,
+                esperando_mision: false,
+                mision_evol_id:   null,
+              };
+              // Si era huevo, revelar el tipo sorteado (ya estaba en rareza)
+              if (mascotaEv.fase === 0) {
+                // Mantener la rareza que ya tiene — tipo se actualiza al mostrar
+                updates.tipo = mascotaEv.rareza === 'normal'    ? 'gato'
+                             : mascotaEv.rareza === 'raro'      ? 'perro'
+                             : mascotaEv.rareza === 'especial'  ? 'hada'
+                             : 'dragon';
+              }
+              await db.from('perfil_mascotas').update(updates).eq('id', mision.mascota_id);
+
+              // Toast de evolución
+              estado.recompensaGanada = {
+                xp: 0, monedas: 0,
+                mensajeEspecial: `🌟 ¡Tu compañero evolucionó a ${MASCOTA_FASES[nuevaFase].nombre}!`,
+              };
+              setTimeout(() => { estado.recompensaGanada = null; }, 5000);
+
+              // Recargar mascotas si es el jugador actual
+              if (estado.perfilActual?.id === jugadorId) await cargarMascota();
+            }
+          } catch(e) { console.warn('Error evolucionando mascota:', e); }
+        }
+
         await Promise.all([cargarMisiones(), cargarPerfiles()]);
-        verificarLogros(); // Comprobar si se desbloquearon nuevos logros con los stats frescos
+        verificarLogros();
       }
 
       estado.aprobando = null;
@@ -2854,7 +2938,7 @@ const app = createApp({
       })
       .on('presence',{ event:'sync' }, () => {
         jugadoresOnline.value = { ...canalRealtime.presenceState() };
-        if (hallScene) actualizarSala3D(jugadoresOnline.value);
+        actualizarSala3D(jugadoresOnline.value);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -2863,46 +2947,30 @@ const app = createApp({
       });
     }
 
-    // ---- Sala 3D ----
+    // ---- Sala CSS 2.5D (Three.js eliminado completamente) ----
+    // jugadoresPresentes: array de { id, nombre, config, nivel } para el template
+    const jugadoresPresentes = ref([]);
+
     function actualizarSala3D(presencia) {
-      if (!hallScene) return;
-      for (const [id,grp] of modelosHall.entries()) { if (!presencia[id]) { hallScene.remove(grp); modelosHall.delete(id); } }
-      const ids = Object.keys(presencia);
-      ids.forEach((id,index) => {
-        const datos = presencia[id][0]; if (!datos) return;
-        const cfgPropia = { ...avatarConfig };
-        Object.assign(avatarConfig, datos.config || {});
-        const grp = buildCharacter(hallScene, modelosHall.get(id));
-        grp.position.x = (index - (ids.length-1)/2) * 1.6; grp.position.y = 0; grp.scale.setScalar(0.55);
-        modelosHall.set(id, grp);
-        Object.assign(avatarConfig, cfgPropia);
-      });
+      // Supabase agrupa por key (perfil_id) → cada valor es un array de conexiones
+      // Tomar solo el primer item de cada key para evitar duplicados por multipestaña
+      const vistos = new Set();
+      jugadoresPresentes.value = Object.entries(presencia)
+        .map(([key, conexiones]) => {
+          const datos = Array.isArray(conexiones) ? conexiones[0] : conexiones;
+          return datos || null;
+        })
+        .filter(d => {
+          if (!d || !d.id || vistos.has(d.id)) return false;
+          vistos.add(d.id);
+          return true;
+        })
+        .slice(0, 6);
     }
+
     async function iniciarSala3D() {
-      await nextTick();
-      const canvas = document.getElementById('hall-canvas');
-      if (!canvas) return;
-      if (canvasObserver) canvasObserver.observe(canvas);
-      if (hallRenderer) { hallRenderer.dispose(); hallRenderer = null; if(hallAnimId){cancelAnimationFrame(hallAnimId);} }
-      hallRenderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
-      const w = canvas.clientWidth || 340, h = 192;
-      hallRenderer.setSize(w, h); hallRenderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-      hallScene  = new THREE.Scene();
-      hallCamera = new THREE.PerspectiveCamera(50, w/h, 0.1, 100);
-      hallCamera.position.set(0, 0.5, 4.5);
-      hallScene.add(new THREE.AmbientLight(0xffffff,0.6));
-      const dl = new THREE.DirectionalLight(0xffd700,1.2); dl.position.set(3,5,3); hallScene.add(dl);
-      const bl = new THREE.DirectionalLight(0x7B2FBE,0.4); bl.position.set(-3,0,-2); hallScene.add(bl);
-      const suelo = new THREE.Mesh(new THREE.PlaneGeometry(10,4), new THREE.MeshToonMaterial({ color:new THREE.Color('#1a0a3e') }));
-      suelo.rotation.x = -Math.PI/2; suelo.position.y = -0.88; hallScene.add(suelo);
-      actualizarSala3D(jugadoresOnline.value);
-      function loopHall() {
-        if (!canvasVisibility['hall-canvas']) { hallAnimId = null; return; }
-        hallAnimId = requestAnimationFrame(loopHall);
-        for (const grp of modelosHall.values()) grp.rotation.y += 0.004;
-        hallRenderer && hallRenderer.render(hallScene, hallCamera);
-      }
-      loopHall();
+      // Ya no hay canvas que inicializar — la sala es HTML/CSS puro
+      await cargarHistorialChat();
     }
 
     // ---- Chat ----
@@ -2930,40 +2998,52 @@ const app = createApp({
     async function cargarInventario() {
       if (!estado.perfilActual) return;
 
-      const [{ data }, { data: equipado }] = await Promise.all([
-        db.from('compras')
+      try {
+        // Intentar con filtro estado='activo' (columna nueva)
+        // Si la columna no existe aún en Supabase, el fallback trae todo
+        const comprasQuery = db.from('compras')
           .select('id, item_nombre, item_id, precio_pagado, tienda_items(icono, categoria, nombre, descripcion, tipo_item, slot_equipo)')
           .eq('perfil_id', estado.perfilActual.id)
-          .eq('estado', 'activo')   // solo los no consumidos
-          .order('created_at', { ascending: false }),
-        db.from('perfil_equipamiento')
-          .select('item_nombre')
-          .eq('perfil_id', estado.perfilActual.id),
-      ]);
+          .order('created_at', { ascending: false });
 
-      const equipadosSet = new Set((equipado || []).map(e => e.item_nombre));
+        // Intentar filtrar por 'activo' — si falla silenciosamente usa todos
+        const { data: dataActivo, error: errActivo } = await comprasQuery.neq('estado', 'consumido');
+        const data = errActivo ? (await comprasQuery).data : dataActivo;
 
-      const mapa = {};
-      (data || []).forEach(c => {
-        const key = c.item_nombre;
-        if (!mapa[key]) {
-          const def = c.tienda_items || {};
-          mapa[key] = {
-            item_nombre: c.item_nombre,
-            icono:       def.icono       || '🎁',
-            categoria:   def.categoria   || 'consumible',
-            tipo_item:   def.tipo_item   || 'consumible',
-            slot_equipo: def.slot_equipo || null,
-            descripcion: def.descripcion || '',
-            cantidad:    0,
-            ids:         [],  // IDs de compras individuales para consumir
-            _equipado:   equipadosSet.has(key),
-          };
-        }
-        mapa[key].cantidad++;
-        mapa[key].ids.push(c.id);
-      });
-      inventario.value = Object.values(mapa).sort((a,b) => b.cantidad - a.cantidad);
+        // perfil_equipamiento puede no existir aún — proteger con try/catch
+        let equipadosSet = new Set();
+        try {
+          const { data: equipado } = await db.from('perfil_equipamiento')
+            .select('item_nombre')
+            .eq('perfil_id', estado.perfilActual.id);
+          equipadosSet = new Set((equipado || []).map(e => e.item_nombre));
+        } catch(_) { /* tabla no existe aún */ }
+
+        const mapa = {};
+        (data || []).forEach(c => {
+          const key = c.item_nombre;
+          if (!mapa[key]) {
+            const def = c.tienda_items || {};
+            mapa[key] = {
+              item_nombre: c.item_nombre,
+              icono:       def.icono       || '🎁',
+              categoria:   def.categoria   || 'consumible',
+              tipo_item:   def.tipo_item   || 'consumible',
+              slot_equipo: def.slot_equipo || null,
+              descripcion: def.descripcion || '',
+              cantidad:    0,
+              ids:         [],
+              _equipado:   equipadosSet.has(key),
+            };
+          }
+          mapa[key].cantidad++;
+          mapa[key].ids.push(c.id);
+        });
+        inventario.value = Object.values(mapa).sort((a,b) => b.cantidad - a.cantidad);
+      } catch(e) {
+        console.warn('cargarInventario error:', e);
+        inventario.value = [];
+      }
     }
 
     function abrirUsarItem(item) {
@@ -2975,29 +3055,36 @@ const app = createApp({
       if (!item) return;
 
       if (item.tipo_item === 'equipamiento') {
-        // Toggle equipar/desequipar
-        if (item._equipado) {
-          await db.from('perfil_equipamiento')
-            .delete()
-            .eq('perfil_id', estado.perfilActual.id)
-            .eq('item_nombre', item.item_nombre);
-        } else {
-          await db.from('perfil_equipamiento').upsert({
-            perfil_id:   estado.perfilActual.id,
-            item_nombre: item.item_nombre,
-            equipado_en: item.slot_equipo || 'accesorio',
-          }, { onConflict: 'perfil_id,item_nombre', ignoreDuplicates: false });
+        try {
+          if (item._equipado) {
+            await db.from('perfil_equipamiento')
+              .delete()
+              .eq('perfil_id', estado.perfilActual.id)
+              .eq('item_nombre', item.item_nombre);
+          } else {
+            await db.from('perfil_equipamiento').upsert({
+              perfil_id:   estado.perfilActual.id,
+              item_nombre: item.item_nombre,
+              equipado_en: item.slot_equipo || 'accesorio',
+            }, { onConflict: 'perfil_id,item_nombre', ignoreDuplicates: false });
+          }
+        } catch(e) {
+          console.warn('Tabla perfil_equipamiento no existe aún. Ejecuta el SQL pendiente.', e);
         }
         estado.usarItemModal = null;
         await cargarInventario();
         return;
       }
 
-      // Consumible: marcar la compra más antigua como consumida
+      // Consumible: marcar una unidad como consumida
       if (item.ids && item.ids.length > 0) {
-        await db.from('compras')
-          .update({ estado: 'consumido' })
-          .eq('id', item.ids[item.ids.length - 1]);
+        try {
+          await db.from('compras')
+            .update({ estado: 'consumido' })
+            .eq('id', item.ids[item.ids.length - 1]);
+        } catch(e) {
+          console.warn('Columna estado no existe en compras aún. Ejecuta el SQL pendiente.', e);
+        }
         estado.usarItemModal = null;
         await cargarInventario();
       }
@@ -3170,164 +3257,324 @@ const app = createApp({
     }
 
     // ================================================================
-    // FEATURE 1 — MASCOTAS EVOLUTIVAS
+    // FEATURE 1 — SISTEMA DE MASCOTAS v2 (Mission-Gating + 3 Slots)
     // ================================================================
-    const mascotaActiva     = ref(null);   // objeto mascota_perfil del jugador
-    const mascotaEspecie    = ref(null);   // objeto mascotas_especies cruzado
+
+    // Constantes del sistema
+    const MASCOTA_FASES = [
+      { fase:0, nombre:'Huevo',       xp_max:0,   color:'#FFD700' },
+      { fase:1, nombre:'Bebé',        xp_max:100, color:'#00FF7F' },
+      { fase:2, nombre:'Adolescente', xp_max:100, color:'#00B4FF' },
+      { fase:3, nombre:'Adulto',      xp_max:null, color:'#FF6B35' },
+    ];
+
+    // RNG ponderado para tipo de mascota al eclosionar
+    const MASCOTA_POOL = [
+      { tipo:'gato',   rareza:'normal',    peso:59, color:'#E8975A', color2:'#C67C4A' },
+      { tipo:'perro',  rareza:'raro',      peso:30, color:'#F0C8A0', color2:'#D4A043' },
+      { tipo:'hada',   rareza:'especial',  peso:10, color:'#FF2D78', color2:'#7B2FBE' },
+      { tipo:'dragon', rareza:'legendario', peso:1, color:'#FF4757', color2:'#4B0082' },
+    ];
+
+    const RAREZA_LABELS = { normal:'Normal', raro:'Raro ✦', especial:'Especial ✦✦', legendario:'Legendario ✦✦✦' };
+    const RAREZA_COLORS = { normal:'text-gray-300', raro:'text-rpgBlue', especial:'text-rpgPurple', legendario:'text-rpgYellow' };
+
+    const mascotasSlots  = ref([null, null, null]); // índice 0=slot1, 1=slot2, 2=slot3
+    const mascotaSlotActivo = ref(0);               // qué slot está viendo el jugador
     const mascotaNuevoNombre = ref('');
+
+    // Computed: mascota del slot activo
+    const mascotaActiva = computed(() => mascotasSlots.value[mascotaSlotActivo.value] || null);
+    const slotsOcupados = computed(() => mascotasSlots.value.filter(Boolean).length);
+
+    // SVGs inline Neo-Brutalistas para cada tipo+fase
+    function svgMascota(tipo, fase) {
+      if (fase === 0 || tipo === 'huevo') return svgHuevo();
+      if (tipo === 'gato')   return svgGato(fase);
+      if (tipo === 'perro')  return svgPerro(fase);
+      if (tipo === 'hada')   return svgHada(fase);
+      if (tipo === 'dragon') return svgDragon(fase);
+      return svgHuevo();
+    }
+
+    function svgHuevo() {
+      return `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+        <ellipse cx="40" cy="55" rx="30" ry="38" fill="#FFD700" stroke="#000" stroke-width="3"/>
+        <ellipse cx="32" cy="48" rx="6" ry="8" fill="#FFE87C" stroke="none" opacity="0.6"/>
+        <ellipse cx="50" cy="62" rx="4" ry="6" fill="#FFE87C" stroke="none" opacity="0.4"/>
+      </svg>`;
+    }
+
+    function svgGato(fase) {
+      const size = fase >= 2 ? 72 : 56;
+      const y0 = fase >= 2 ? 8 : 18;
+      return `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+        <!-- Orejas -->
+        <polygon points="20,${y0+10} 10,${y0-8} 30,${y0+2}" fill="#E8975A" stroke="#000" stroke-width="2.5"/>
+        <polygon points="60,${y0+10} 70,${y0-8} 50,${y0+2}" fill="#E8975A" stroke="#000" stroke-width="2.5"/>
+        <polygon points="22,${y0+8} 14,${y0-3} 29,${y0+3}" fill="#FF9999" stroke="none"/>
+        <polygon points="58,${y0+8} 66,${y0-3} 51,${y0+3}" fill="#FF9999" stroke="none"/>
+        <!-- Cabeza -->
+        <ellipse cx="40" cy="${y0+22}" rx="${fase>=2?24:20}" ry="${fase>=2?22:18}" fill="#E8975A" stroke="#000" stroke-width="3"/>
+        <!-- Ojos -->
+        <ellipse cx="30" cy="${y0+20}" rx="${fase>=2?5:4}" ry="${fase>=2?6:5}" fill="#1a1a2e" stroke="#000" stroke-width="1.5"/>
+        <ellipse cx="50" cy="${y0+20}" rx="${fase>=2?5:4}" ry="${fase>=2?6:5}" fill="#1a1a2e" stroke="#000" stroke-width="1.5"/>
+        <circle cx="32" cy="${y0+18}" r="1.5" fill="white"/>
+        <circle cx="52" cy="${y0+18}" r="1.5" fill="white"/>
+        <!-- Nariz y boca -->
+        <ellipse cx="40" cy="${y0+27}" rx="3" ry="2" fill="#FF9999" stroke="#000" stroke-width="1"/>
+        <path d="M37,${y0+29} Q40,${y0+33} 43,${y0+29}" fill="none" stroke="#000" stroke-width="1.5"/>
+        <!-- Bigotes -->
+        <line x1="22" y1="${y0+27}" x2="36" y2="${y0+28}" stroke="#000" stroke-width="1.5"/>
+        <line x1="44" y1="${y0+28}" x2="58" y2="${y0+27}" stroke="#000" stroke-width="1.5"/>
+        <!-- Cuerpo (fase 2+) -->
+        ${fase >= 2 ? `<ellipse cx="40" cy="${y0+62}" rx="22" ry="${fase>=3?28:22}" fill="#E8975A" stroke="#000" stroke-width="3"/>` : ''}
+        <!-- Cola -->
+        ${fase >= 2 ? `<path d="M62,${y0+60} Q78,${y0+45} 70,${y0+30}" fill="none" stroke="#E8975A" stroke-width="7" stroke-linecap="round"/>
+        <path d="M62,${y0+60} Q78,${y0+45} 70,${y0+30}" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"/>` : ''}
+      </svg>`;
+    }
+
+    function svgPerro(fase) {
+      const y0 = fase >= 2 ? 5 : 15;
+      return `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+        <!-- Orejas caídas -->
+        <ellipse cx="18" cy="${y0+18}" rx="10" ry="16" fill="#C67C4A" stroke="#000" stroke-width="2.5" transform="rotate(-15,18,${y0+18})"/>
+        <ellipse cx="62" cy="${y0+18}" rx="10" ry="16" fill="#C67C4A" stroke="#000" stroke-width="2.5" transform="rotate(15,62,${y0+18})"/>
+        <!-- Cabeza -->
+        <ellipse cx="40" cy="${y0+22}" rx="${fase>=2?25:21}" ry="${fase>=2?22:19}" fill="#F0C8A0" stroke="#000" stroke-width="3"/>
+        <!-- Hocico -->
+        <ellipse cx="40" cy="${y0+32}" rx="13" ry="10" fill="#D4A043" stroke="#000" stroke-width="2"/>
+        <!-- Ojos -->
+        <circle cx="30" cy="${y0+18}" r="${fase>=2?5:4}" fill="#1a1a2e" stroke="#000" stroke-width="1.5"/>
+        <circle cx="50" cy="${y0+18}" r="${fase>=2?5:4}" fill="#1a1a2e" stroke="#000" stroke-width="1.5"/>
+        <circle cx="32" cy="${y0+16}" r="1.5" fill="white"/>
+        <circle cx="52" cy="${y0+16}" r="1.5" fill="white"/>
+        <!-- Nariz -->
+        <ellipse cx="40" cy="${y0+28}" rx="5" ry="3.5" fill="#1a1a2e" stroke="#000" stroke-width="1"/>
+        <!-- Boca -->
+        <path d="M33,${y0+33} Q40,${y0+40} 47,${y0+33}" fill="none" stroke="#000" stroke-width="2"/>
+        <!-- Cuerpo (fase 2+) -->
+        ${fase >= 2 ? `<ellipse cx="40" cy="${y0+65}" rx="22" ry="${fase>=3?28:22}" fill="#F0C8A0" stroke="#000" stroke-width="3"/>` : ''}
+        <!-- Cola (fase 2+) -->
+        ${fase >= 2 ? `<path d="M60,${y0+55} Q80,${y0+40} 75,${y0+25}" fill="none" stroke="#F0C8A0" stroke-width="8" stroke-linecap="round"/>
+        <path d="M60,${y0+55} Q80,${y0+40} 75,${y0+25}" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"/>` : ''}
+      </svg>`;
+    }
+
+    function svgHada(fase) {
+      const y0 = fase >= 2 ? 2 : 12;
+      return `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+        <!-- Alas -->
+        ${fase >= 1 ? `<ellipse cx="14" cy="${y0+30}" rx="14" ry="22" fill="#FF2D7844" stroke="#7B2FBE" stroke-width="2" transform="rotate(-20,14,${y0+30})"/>
+        <ellipse cx="66" cy="${y0+30}" rx="14" ry="22" fill="#FF2D7844" stroke="#7B2FBE" stroke-width="2" transform="rotate(20,66,${y0+30})"/>` : ''}
+        <!-- Cabeza -->
+        <circle cx="40" cy="${y0+20}" r="${fase>=2?20:16}" fill="#FDBCB4" stroke="#000" stroke-width="3"/>
+        <!-- Pelo mágico -->
+        <ellipse cx="40" cy="${y0+10}" rx="${fase>=2?20:16}" ry="10" fill="#FF2D78" stroke="#000" stroke-width="2"/>
+        <!-- Ojos -->
+        <ellipse cx="33" cy="${y0+19}" rx="4" ry="5" fill="#7B2FBE" stroke="#000" stroke-width="1.5"/>
+        <ellipse cx="47" cy="${y0+19}" rx="4" ry="5" fill="#7B2FBE" stroke="#000" stroke-width="1.5"/>
+        <circle cx="34" cy="${y0+17}" r="1.5" fill="white"/>
+        <circle cx="48" cy="${y0+17}" r="1.5" fill="white"/>
+        <!-- Boca sonriente -->
+        <path d="M35,${y0+27} Q40,${y0+32} 45,${y0+27}" fill="none" stroke="#000" stroke-width="2"/>
+        <!-- Varita (fase 2+) -->
+        ${fase >= 2 ? `<line x1="60" y1="${y0+40}" x2="72" y2="${y0+15}" stroke="#FFD700" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="72" cy="${y0+15}" r="5" fill="#FFD700" stroke="#000" stroke-width="2"/>` : ''}
+        <!-- Cuerpo (fase 2+) -->
+        ${fase >= 2 ? `<ellipse cx="40" cy="${y0+58}" rx="16" ry="${fase>=3?28:22}" fill="#FF2D78" stroke="#000" stroke-width="3"/>` : ''}
+        <!-- Estrellas mágicas -->
+        ${fase >= 3 ? `<text x="5" y="${y0+35}" font-size="12">✨</text><text x="58" y="${y0+55}" font-size="10">⭐</text>` : ''}
+      </svg>`;
+    }
+
+    function svgDragon(fase) {
+      const y0 = fase >= 2 ? 2 : 10;
+      return `<svg viewBox="0 0 80 100" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+        <!-- Cuernos -->
+        <polygon points="28,${y0+8} 22,${y0-6} 34,${y0+2}" fill="#FF4757" stroke="#000" stroke-width="2"/>
+        <polygon points="52,${y0+8} 58,${y0-6} 46,${y0+2}" fill="#FF4757" stroke="#000" stroke-width="2"/>
+        <!-- Alas (fase 2+) -->
+        ${fase >= 2 ? `<path d="M12,${y0+45} L2,${y0+15} Q10,${y0+30} 20,${y0+40}" fill="#4B0082" stroke="#000" stroke-width="2"/>
+        <path d="M68,${y0+45} L78,${y0+15} Q70,${y0+30} 60,${y0+40}" fill="#4B0082" stroke="#000" stroke-width="2"/>` : ''}
+        <!-- Cabeza -->
+        <ellipse cx="40" cy="${y0+22}" rx="${fase>=2?24:20}" ry="${fase>=2?22:18}" fill="#FF4757" stroke="#000" stroke-width="3"/>
+        <!-- Escamas en cabeza -->
+        <ellipse cx="40" cy="${y0+12}" rx="${fase>=2?20:16}" ry="8" fill="#4B0082" stroke="#000" stroke-width="2"/>
+        <!-- Ojos -->
+        <ellipse cx="31" cy="${y0+20}" rx="${fase>=2?5:4}" ry="${fase>=2?6:5}" fill="#FFD700" stroke="#000" stroke-width="1.5"/>
+        <ellipse cx="49" cy="${y0+20}" rx="${fase>=2?5:4}" ry="${fase>=2?6:5}" fill="#FFD700" stroke="#000" stroke-width="1.5"/>
+        <ellipse cx="31" cy="${y0+20}" rx="2" ry="4" fill="#000"/>
+        <ellipse cx="49" cy="${y0+20}" rx="2" ry="4" fill="#000"/>
+        <!-- Hocico con fuego -->
+        <ellipse cx="40" cy="${y0+32}" rx="12" ry="8" fill="#FF6B35" stroke="#000" stroke-width="2"/>
+        ${fase >= 3 ? `<path d="M34,${y0+36} Q40,${y0+45} 46,${y0+36}" fill="#FFD700" stroke="none" opacity="0.8"/>` : ''}
+        <!-- Dientes -->
+        <polygon points="35,${y0+38} 33,${y0+44} 37,${y0+38}" fill="white" stroke="#000" stroke-width="1"/>
+        <polygon points="43,${y0+38} 41,${y0+44} 45,${y0+38}" fill="white" stroke="#000" stroke-width="1"/>
+        <!-- Cuerpo (fase 2+) -->
+        ${fase >= 2 ? `<ellipse cx="40" cy="${y0+66}" rx="22" ry="${fase>=3?26:20}" fill="#FF4757" stroke="#000" stroke-width="3"/>
+        <!-- Escamas cuerpo -->
+        <ellipse cx="40" cy="${y0+58}" rx="16" ry="8" fill="#4B0082" stroke="#000" stroke-width="1.5" opacity="0.7"/>` : ''}
+        <!-- Cola (fase 2+) -->
+        ${fase >= 2 ? `<path d="M60,${y0+68} Q80,${y0+60} 76,${y0+35}" fill="none" stroke="#FF4757" stroke-width="8" stroke-linecap="round"/>
+        <path d="M60,${y0+68} Q80,${y0+60} 76,${y0+35}" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+        <polygon points="76,${y0+35} 82,${y0+25} 70,${y0+28}" fill="#FF4757" stroke="#000" stroke-width="2"/>` : ''}
+      </svg>`;
+    }
 
     async function cargarMascota() {
       if (!estado.perfilActual) return;
-      const { data } = await db.from('mascotas_perfil')
-        .select('*, mascotas_especies(*)')
-        .eq('perfil_id', estado.perfilActual.id)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
+      try {
+        const { data } = await db.from('perfil_mascotas')
+          .select('*')
+          .eq('perfil_id', estado.perfilActual.id)
+          .order('slot');
 
-      if (data) {
-        mascotaActiva.value  = data;
-        mascotaEspecie.value = data.mascotas_especies;
-        // Calcular pérdida de hambre por días sin alimentar
-        const diasSinAlim = Math.floor(
-          (Date.now() - new Date(data.ultima_alim).getTime()) / 86400000
-        );
-        if (diasSinAlim > 0) {
-          const nuevaHambre = Math.max(0, data.hambre - diasSinAlim * 10);
-          if (nuevaHambre !== data.hambre) {
-            await db.from('mascotas_perfil')
-              .update({ hambre: nuevaHambre })
-              .eq('id', data.id);
-            mascotaActiva.value.hambre = nuevaHambre;
+        const slots = [null, null, null];
+        for (const m of (data || [])) {
+          const idx = m.slot - 1;
+          if (idx >= 0 && idx < 3) {
+            // Penalización por no alimentar
+            const ultimaAlim = m.ultima_alim ? new Date(m.ultima_alim) : new Date();
+            const diasSin = Math.floor((Date.now() - ultimaAlim.getTime()) / 86400000);
+            if (diasSin > 0 && m.fase > 0) {
+              const nuevaXP = Math.max(0, m.xp_fase - diasSin * 8);
+              if (nuevaXP !== m.xp_fase) {
+                await db.from('perfil_mascotas').update({ xp_fase: nuevaXP }).eq('id', m.id);
+                m.xp_fase = nuevaXP;
+              }
+            }
+            slots[idx] = m;
           }
         }
+        mascotasSlots.value = slots;
+        // Si el slot activo está vacío, ir al primero ocupado
+        if (!slots[mascotaSlotActivo.value]) {
+          const primerOcupado = slots.findIndex(Boolean);
+          if (primerOcupado >= 0) mascotaSlotActivo.value = primerOcupado;
+        }
+      } catch(e) {
+        console.warn('cargarMascota error:', e);
       }
     }
 
-    // Icono actual según nivel de evolución
-    const iconoMascotaActual = computed(() => {
-      if (!mascotaActiva.value || !mascotaEspecie.value) return '🥚';
-      const evols = mascotaEspecie.value.evoluciones;
-      // Encontrar la etapa más alta desbloqueada
-      let iconoActual = evols[0].icono;
-      for (const e of evols) {
-        if (mascotaActiva.value.hambre >= e.nivel) iconoActual = e.icono;
-      }
-      return iconoActual;
-    });
-    const nombreEtapaMascota = computed(() => {
-      if (!mascotaActiva.value || !mascotaEspecie.value) return '';
-      const evols = mascotaEspecie.value.evoluciones;
-      let nombre = evols[0].nombre;
-      for (const e of evols) {
-        if (mascotaActiva.value.hambre >= e.nivel) nombre = e.nombre;
-      }
-      return nombre;
-    });
-    const proximaEtapaMascota = computed(() => {
-      if (!mascotaActiva.value || !mascotaEspecie.value) return null;
-      const evols = mascotaEspecie.value.evoluciones;
-      return evols.find(e => e.nivel > mascotaActiva.value.hambre) || null;
-    });
-    const progresoEvolucion = computed(() => {
-      if (!mascotaActiva.value || !proximaEtapaMascota.value) return 100;
-      const evols = mascotaEspecie.value.evoluciones;
-      // Etapa actual (la más alta desbloqueada)
-      let etapaActualNivel = 0;
-      for (const e of evols) {
-        if (mascotaActiva.value.hambre >= e.nivel) etapaActualNivel = e.nivel;
-      }
-      const rango = proximaEtapaMascota.value.nivel - etapaActualNivel;
-      const avance = mascotaActiva.value.hambre - etapaActualNivel;
-      return Math.min(100, Math.round((avance / rango) * 100));
-    });
+    // Sorteo RNG ponderado
+    function _sortearTipoMascota() {
+      const total = MASCOTA_POOL.reduce((s, p) => s + p.peso, 0);
+      let rand = Math.random() * total;
+      for (const p of MASCOTA_POOL) { rand -= p.peso; if (rand <= 0) return p; }
+      return MASCOTA_POOL[0];
+    }
 
-    async function _aplicarAlimento(cantidad, costo) {
-      if (!mascotaActiva.value || estado.perfilActual.monedas < costo) return;
-      const hambreAnterior = mascotaActiva.value.hambre;
-      const nuevaHambre    = Math.min(100, hambreAnterior + cantidad);
-      const eraLegendario  = hambreAnterior >= 100;
+    async function darMascotaAleatoria() {
+      if (slotsOcupados.value >= 3) return; // slots llenos
+      // Encontrar slot libre
+      const slotLibre = mascotasSlots.value.findIndex(s => !s) + 1;
+      const sorteada  = _sortearTipoMascota();
+      try {
+        const { error } = await db.from('perfil_mascotas').insert({
+          perfil_id:  estado.perfilActual.id,
+          slot:       slotLibre,
+          tipo:       'huevo',
+          rareza:     sorteada.rareza,
+          nombre:     'Mi Compañero',
+          fase:       0,
+          xp_fase:    0,
+          ultima_alim: new Date().toISOString(),
+        });
+        if (!error) {
+          await cargarMascota();
+          estado.mascotaBienvenida = { especie: sorteada.tipo, icono: '🥚' };
+        }
+      } catch(e) { console.warn('darMascotaAleatoria error:', e); }
+    }
 
-      const [{ error: e1 }, { error: e2 }] = await Promise.all([
-        db.from('mascotas_perfil')
-          .update({ hambre: nuevaHambre, ultima_alim: new Date().toISOString() })
-          .eq('id', mascotaActiva.value.id),
-        db.from('perfiles')
-          .update({ monedas: estado.perfilActual.monedas - costo })
-          .eq('id', estado.perfilActual.id),
-      ]);
+    async function alimentarMascotaSlot(slotIdx) {
+      const m = mascotasSlots.value[slotIdx];
+      if (!m || estado.perfilActual.monedas < 5) return;
+      if (m.fase === 0 || m.esperando_mision) return; // huevo no come; esperando misión bloqueado
+      const xpMax = MASCOTA_FASES[m.fase]?.xp_max;
+      if (xpMax === null) return; // adulto — ya no necesita XP
 
-      if (!e1 && !e2) {
-        mascotaActiva.value.hambre = nuevaHambre;
-        estado.perfilActual.monedas -= costo;
+      const nuevaXP   = Math.min(xpMax, m.xp_fase + 20);
+      const llenaAhora = nuevaXP >= xpMax;
 
-        // Detectar evolución — si cruza un umbral de evolución
-        const evolAntes = _etapaSegunHambre(hambreAnterior);
-        const evolDespues = _etapaSegunHambre(nuevaHambre);
-        if (evolDespues > evolAntes) {
-          estado.mascotaEvolucionando = true;
-          setTimeout(() => { estado.mascotaEvolucionando = false; }, 2500);
+      try {
+        const updates = { xp_fase: nuevaXP, ultima_alim: new Date().toISOString() };
+        // Si llenó la barra, entra en estado "esperando misión de evolución"
+        if (llenaAhora && m.fase < 3) {
+          updates.esperando_mision = true;
+          // Crear misión especial de evolución automáticamente
+          const { data: misionCreada } = await db.from('misiones').insert({
+            titulo:       `⚡ Evolución de ${m.nombre}`,
+            descripcion:  `¡${m.nombre} está listo/a para evolucionar de ${MASCOTA_FASES[m.fase].nombre} a ${MASCOTA_FASES[m.fase+1].nombre}! El DM debe aprobar esta misión.`,
+            recompensa_monedas: 0,
+            recompensa_xp: 0,
+            tipo:          'evolucion_mascota',
+            tipo_especial: 'evolucion_mascota',
+            estado:        'disponible',
+            creado_por:    estado.perfilActual.id,
+            completado_por: estado.perfilActual.id,
+          }).select().single();
+          if (misionCreada) {
+            updates.mision_evol_id = misionCreada.id;
+            await db.from('misiones').update({ estado: 'pendiente_validacion', mascota_id: m.id }).eq('id', misionCreada.id);
+          }
         }
 
-        // Al llegar a 100 por primera vez o mantenerla: sube generación
-        if (!eraLegendario && nuevaHambre >= 100) {
-          const nuevaGen = (mascotaActiva.value.generacion || 0) + 1;
-          await db.from('mascotas_perfil')
-            .update({ generacion: nuevaGen })
-            .eq('id', mascotaActiva.value.id);
-          mascotaActiva.value.generacion = nuevaGen;
-          // Toast especial de evolución legendaria
-          estado.recompensaGanada = {
-            xp: 0, monedas: 0,
-            mensajeEspecial: `🌟 ¡${mascotaActiva.value.nombre} alcanzó su forma Legendaria!`,
-          };
-          setTimeout(() => { estado.recompensaGanada = null; }, 5000);
+        await db.from('perfil_mascotas').update(updates).eq('id', m.id);
+        await db.from('perfiles').update({ monedas: estado.perfilActual.monedas - 5 }).eq('id', estado.perfilActual.id);
+        estado.perfilActual.monedas -= 5;
+        await cargarMascota();
+      } catch(e) { console.warn('alimentarMascotaSlot error:', e); }
+    }
+
+    async function liberarMascota(slotIdx) {
+      const m = mascotasSlots.value[slotIdx];
+      if (!m) return;
+      estado.confirmarModal = {
+        titulo: `¿Liberar a ${m.nombre}?`,
+        mensaje: 'Esta acción es permanente. Tu compañero volverá a la naturaleza.',
+        icono: '💔',
+        accion: async () => {
+          try {
+            await db.from('perfil_mascotas').delete().eq('id', m.id);
+            await cargarMascota();
+          } catch(e) { console.warn('liberarMascota error:', e); }
         }
-      }
+      };
     }
-
-    function _etapaSegunHambre(hambre) {
-      if (!mascotaEspecie.value) return 0;
-      let etapa = 0;
-      for (const e of mascotaEspecie.value.evoluciones) {
-        if (hambre >= e.nivel) etapa++;
-      }
-      return etapa;
-    }
-
-    async function alimentarMascota()       { await _aplicarAlimento(15, 5);  }
-    async function alimentarMascotaGrande() { await _aplicarAlimento(30, 10); }
 
     async function guardarNombreMascota() {
-      const nombre = mascotaNuevoNombre.value.trim();
-      if (!nombre || !mascotaActiva.value) return;
-      const { error } = await db.from('mascotas_perfil')
-        .update({ nombre })
-        .eq('id', mascotaActiva.value.id);
-      if (!error) {
-        mascotaActiva.value.nombre = nombre;
-        mascotaNuevoNombre.value   = '';
-        estado.mascotaNombrando    = false;
-      }
+      const m = mascotaActiva.value;
+      if (!m || !mascotaNuevoNombre.value.trim()) return;
+      try {
+        await db.from('perfil_mascotas').update({ nombre: mascotaNuevoNombre.value.trim() }).eq('id', m.id);
+        mascotasSlots.value[mascotaSlotActivo.value].nombre = mascotaNuevoNombre.value.trim();
+        mascotaNuevoNombre.value = '';
+        estado.mascotaNombrando  = false;
+      } catch(e) { console.warn('guardarNombreMascota error:', e); }
     }
 
-    // Dar mascota al jugador al comprar Huevo Misterioso
-    async function darMascotaAleatoria() {
-      const { data: especies } = await db.from('mascotas_especies').select('*');
-      if (!especies?.length) return;
-      const especie = especies[Math.floor(Math.random() * especies.length)];
-      const { error } = await db.from('mascotas_perfil').insert({
-        perfil_id:  estado.perfilActual.id,
-        especie_id: especie.id,
-        nombre:     'Mi Compañero',
-        hambre:     0,
-      });
-      if (!error) {
-        await cargarMascota();
-        // Mostrar modal de bienvenida con nombre de la especie obtenida
-        estado.mascotaBienvenida = { especie: especie.nombre, icono: especie.icono_huevo };
-      }
-    }
+    // Computed helpers para el slot activo
+    const mascotaFaseInfo   = computed(() => MASCOTA_FASES[mascotaActiva.value?.fase ?? 0]);
+    const mascotaProgresoXP = computed(() => {
+      const m = mascotaActiva.value;
+      if (!m) return 0;
+      const max = MASCOTA_FASES[m.fase]?.xp_max;
+      if (!max) return 100;
+      return Math.min(100, Math.round((m.xp_fase / max) * 100));
+    });
+    // Compatibilidad con código existente que usa estas variables
+    const mascotaActualCompat = computed(() => mascotaActiva.value);
+    const iconoMascotaActual  = computed(() => ''); // No se usa en nueva UI
+    const nombreEtapaMascota  = computed(() => mascotaFaseInfo.value?.nombre || '');
+    const proximaEtapaMascota = computed(() => MASCOTA_FASES[( mascotaActiva.value?.fase ?? 0) + 1] || null);
+    const progresoEvolucion   = computed(() => mascotaProgresoXP.value);
+
+    // Sistema antiguo de mascotas eliminado — reemplazado por perfil_mascotas v2
 
     // ================================================================
     // FEATURE 2 — MAPA DE PROGRESIÓN VISUAL
@@ -3611,35 +3858,12 @@ const app = createApp({
     });
     watch(() => estado.vistaJugador, async (vista) => {
       if (vista === 'academia') calcularIntentosAcademia();
-      if (vista === 'sala') { await nextTick(); iniciarSala3D(); cargarHistorialChat(); }
-      else {
-        if (hallAnimId) { cancelAnimationFrame(hallAnimId); hallAnimId = null; }
-        const canvas = document.getElementById('hall-canvas');
-        if (canvas && canvasObserver) canvasObserver.unobserve(canvas);
-        if (hallRenderer) { hallRenderer.dispose(); hallRenderer = null; hallScene = null; }
-      }
+      if (vista === 'sala') await iniciarSala3D();
     });
 
     // ---- Ciclo de vida ----
     onMounted(async () => {
-      // IntersectionObserver: detiene el RAF cuando el canvas sale del viewport
-      // y lo reanuda al volver — evita consumo de CPU/batería innecesario en móvil
-      // IntersectionObserver solo para la sala 3D (hall-canvas)
-      canvasObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          const id = entry.target.id;
-          if (id === 'hall-canvas') {
-            if (entry.isIntersecting && hallScene && !hallAnimId) {
-              (function loopHall() {
-                if (!hallScene) { hallAnimId = null; return; }
-                hallAnimId = requestAnimationFrame(loopHall);
-                for (const grp of modelosHall.values()) grp.rotation.y += 0.004;
-                hallRenderer && hallRenderer.render(hallScene, hallCamera);
-              })();
-            }
-          }
-        });
-      }, { threshold: 0.05 });
+      // IntersectionObserver eliminado — sala migrada a CSS 2.5D sin canvas
 
       await Promise.all([cargarPerfiles(), cargarMisiones()]);
 
@@ -3672,12 +3896,11 @@ const app = createApp({
     
     onUnmounted(() => {
       if (canalRealtime) db.removeChannel(canalRealtime);
-      if (hallAnimId)   cancelAnimationFrame(hallAnimId);
-      if (hallRenderer) hallRenderer.dispose();
+      // hallRenderer eliminado — sala migrada a CSS 2.5D
     });
 
     return {
-      estado, animaciones, loginState, perfiles, misiones, jugadoresOnline,
+      estado, animaciones, loginState, perfiles, misiones, jugadoresOnline, jugadoresPresentes,
       adminTabActivo, adminTabs, nuevaMision, nuevoUsuario, usuarioFeedback,
       editandoUsuario, pinEliminar, pinEliminarError, nextTick,
       avatarConfig, avatarPartes, estilosAvatar, avatarParteActiva, paletasPorParte,
@@ -3698,10 +3921,12 @@ const app = createApp({
       inventario, equipamiento, abrirUsarItem, confirmarUsarItem,
       subirFotoPerfil, eliminarFotoPerfil, statsCalculados,
       mathQuest, responderMathQuest, siguientePreguntaMath,
-      // Feature 1: Mascotas
-      mascotaActiva, mascotaNuevoNombre,
+      // Feature 1: Mascotas v2
+      mascotasSlots, mascotaSlotActivo, mascotaActiva, mascotaNuevoNombre,
+      slotsOcupados, mascotaFaseInfo, mascotaProgresoXP,
       iconoMascotaActual, nombreEtapaMascota, proximaEtapaMascota, progresoEvolucion,
-      alimentarMascota, alimentarMascotaGrande, guardarNombreMascota,
+      alimentarMascotaSlot, liberarMascota, guardarNombreMascota,
+      svgMascota, svgHuevo, MASCOTA_FASES, RAREZA_LABELS, RAREZA_COLORS,
       // Feature 2: Mapa
       nodosMapaReino, nodoActual, nodoSiguiente, nodoDesbloqueado, nodoEsActual,
       // Feature 3: Rachas + Cofres
